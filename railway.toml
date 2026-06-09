@@ -1,9 +1,8 @@
 [build]
-builder = "nixpacks"
-buildCommand = "echo 'build handled by nixpacks.toml'"
+builder = "dockerfile"
+dockerfilePath = "backend/Dockerfile"
 
 [deploy]
-startCommand = "gunicorn config.wsgi:application --bind 0.0.0.0:${PORT} --chdir backend"
 healthcheckPath = "/"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
