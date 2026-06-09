@@ -33,7 +33,7 @@ def env_list(key, default=""):
 SECRET_KEY = env("SECRET_KEY", "dev-secret-no-usar-en-produccion")
 DEBUG = env_bool("DEBUG", True)
 ALLOWED_HOSTS = env_list("ALLOWED_HOSTS", "localhost,127.0.0.1")
-ALLOWED_HOSTS.append(".vercel.app")
+ALLOWED_HOSTS.extend([".vercel.app", ".onrender.com"])
 
 # === Aplicaciones ===
 DJANGO_APPS = [
