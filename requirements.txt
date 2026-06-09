@@ -12,6 +12,5 @@ pandas==3.0.3
 numpy==2.4.6
 joblib==1.5.3
 google-genai==2.8.0
-openai-whisper==20231117
 imageio[ffmpeg]==2.34.1
 python-multipart==0.0.9
