@@ -6,7 +6,6 @@ from pathlib import Path
 from functools import lru_cache
 
 from django.conf import settings
-import whisper
 import imageio_ffmpeg as ffmpeg
 from google import genai
 from pydantic import BaseModel
@@ -29,6 +28,10 @@ def _ensure_ffmpeg_alias() -> str:
 
 @lru_cache(maxsize=1)
 def _get_whisper_model():
+    try:
+        import whisper
+    except ModuleNotFoundError as exc:
+        raise RuntimeError("Whisper no está instalado en este entorno.") from exc
     model_name = getattr(settings, "WHISPER_MODEL", "base")
     return whisper.load_model(model_name)
 
