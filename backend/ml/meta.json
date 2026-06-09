@@ -1,0 +1,63 @@
+{
+  "trained_at": "2026-06-09T22:08:39.317675+00:00",
+  "algorithm": "RandomForestClassifier",
+  "n_estimators": 200,
+  "n_train": 600,
+  "test_accuracy": 0.82,
+  "roc_auc": 0.898,
+  "base_rate": 0.38,
+  "synthetic_labels": true,
+  "importances": [
+    {
+      "module": "renuncia",
+      "label": "Riesgo de renuncia",
+      "importance": 0.2496
+    },
+    {
+      "module": "satisfaccion",
+      "label": "Satisfacción laboral",
+      "importance": 0.1518
+    },
+    {
+      "module": "liderazgo",
+      "label": "Liderazgo",
+      "importance": 0.1345
+    },
+    {
+      "module": "productividad",
+      "label": "Productividad",
+      "importance": 0.0842
+    },
+    {
+      "module": "motivacion",
+      "label": "Motivación",
+      "importance": 0.0752
+    },
+    {
+      "module": "burnout",
+      "label": "Burnout",
+      "importance": 0.0734
+    },
+    {
+      "module": "equipo",
+      "label": "Trabajo en equipo",
+      "importance": 0.0667
+    },
+    {
+      "module": "capacitacion",
+      "label": "Capacitación",
+      "importance": 0.0621
+    },
+    {
+      "module": "clima",
+      "label": "Clima laboral",
+      "importance": 0.0513
+    },
+    {
+      "module": "estres",
+      "label": "Estrés",
+      "importance": 0.0512
+    }
+  ],
+  "employees_scored": 25
+}
