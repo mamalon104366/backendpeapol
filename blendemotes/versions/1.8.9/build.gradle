@@ -108,3 +108,10 @@ processForgeResources {
         expand "version": project.version
     }
 }
+
+// CI self-test: ./gradlew :mc-1.8.9:forgeRunClient -Pselftest
+tasks.matching { it.name.endsWith("RunClient") || it.name == "runClient" }.configureEach {
+    if (project.hasProperty("selftest")) {
+        jvmArgs "-Dblendemotes.selftest=true", "-Dorg.lwjgl.opengl.Display.allowSoftwareOpenGL=true"
+    }
+}

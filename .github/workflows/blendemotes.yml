@@ -44,3 +44,48 @@ jobs:
           path: |
             blendemotes/versions/*/build/libs/*.jar
           if-no-files-found: ignore
+
+  selftest:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - project: mc-1.8.9
+            dir: versions/1.8.9
+            task: forgeRunClient
+          - project: mc-1.8.9
+            dir: versions/1.8.9
+            task: fabricRunClient
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: |
+            8
+            17
+            21
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: false
+      - name: Install virtual display
+        run: sudo apt-get update -q && sudo apt-get install -y -q xvfb x11-xserver-utils libgl1-mesa-dri libglx-mesa0 mesa-utils libxrandr2 libxcursor1 libxi6 libxxf86vm1 libopenal1
+      - name: Run Minecraft self-test
+        env:
+          LIBGL_ALWAYS_SOFTWARE: "1"
+        run: |
+          timeout 1500 xvfb-run -a -s "-screen 0 1280x720x24" ./gradlew :${{ matrix.project }}:${{ matrix.task }} -Pselftest --console=plain > selftest.log 2>&1 || echo "run exited with $?"
+          grep -E "selftest|BlendEmotes|Exception|Error|error" selftest.log | head -200 || true
+          grep -q BLENDEMOTES_SELFTEST_DONE selftest.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: selftest-${{ matrix.project }}-${{ matrix.task }}
+          path: |
+            blendemotes/selftest.log
+            blendemotes/${{ matrix.dir }}/run/screenshots/*.png
+            blendemotes/${{ matrix.dir }}/run/logs/latest.log
+          if-no-files-found: ignore
