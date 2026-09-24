@@ -1,0 +1,17 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "dev.blendemotes.legacy.fabric.mixin",
+  "compatibilityLevel": "JAVA_8",
+  "mixins": [
+    "NetHandlerPlayServerMixin",
+    "PlayerListMixin"
+  ],
+  "client": [
+    "MinecraftMixin",
+    "NetHandlerPlayClientMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

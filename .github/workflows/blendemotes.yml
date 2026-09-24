@@ -38,7 +38,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        mc: [ "1.8.9", "1.20.1" ]
+        mc: [ "1.8.9", "1.12.2", "1.20.1" ]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -109,6 +109,8 @@ jobs:
 
   selftest:
     needs: build
+    # each job compiles its own version, so a failed build elsewhere does not block it
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
     strategy:
@@ -120,6 +122,12 @@ jobs:
             task: forgeRunClient
           - project: mc-1.8.9
             dir: versions/1.8.9
+            task: fabricRunClient
+          - project: mc-1.12.2
+            dir: versions/1.12.2
+            task: forgeRunClient
+          - project: mc-1.12.2
+            dir: versions/1.12.2
             task: fabricRunClient
           - project: mc-1.20.1
             dir: versions/1.20.1
@@ -147,7 +155,7 @@ jobs:
           LIBGL_ALWAYS_SOFTWARE: "1"
           BLENDEMOTES_SELFTEST: "1"
         run: |
-          timeout 1500 xvfb-run -a -s "-screen 0 1280x720x24" ./gradlew :${{ matrix.project }}:${{ matrix.task }} -Pselftest --console=plain > selftest.log 2>&1 || echo "run exited with $?"
+          timeout 1200 xvfb-run -a -s "-screen 0 1280x720x24" ./gradlew :${{ matrix.project }}:${{ matrix.task }} -Pselftest --console=plain > selftest.log 2>&1 || echo "run exited with $?"
           grep -E "selftest|BlendEmotes|Exception|Error|error" selftest.log | head -200 || true
           echo "----- last lines -----"
           tail -60 selftest.log | cut -c1-400 || true

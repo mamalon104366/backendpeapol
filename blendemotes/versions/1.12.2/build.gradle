@@ -3,12 +3,12 @@ plugins {
     id "xyz.wagyourtail.unimined" version "${unimined_version}"
 }
 
-// Minecraft 1.8.9: everything else is in gradle/legacy.gradle and shared/legacy.
+// Minecraft 1.12.2: everything else is in gradle/legacy.gradle and shared/legacy.
 ext {
-    minecraft = "1.8.9"
-    mcVersion = 10809
-    mcp = "22-1.8.9"
-    forge = "11.15.1.2318-1.8.9"
+    minecraft = "1.12.2"
+    mcVersion = 11202
+    mcp = "39-1.12"
+    forge = "14.23.5.2864"
     legacyFabricLoader = "0.16.13"
 }
 

@@ -28,6 +28,8 @@ final class SelfTest {
     private static int state;
     private static int timer;
     private static int emoteIndex;
+    /** Ticks since the game started; the test gives up (and fails) after about 10 minutes. */
+    private static int total;
 
     private SelfTest() {
     }
@@ -37,6 +39,16 @@ final class SelfTest {
             return;
         }
         timer++;
+        total++;
+        if (total % 200 == 0) {
+            ModernEmotes.LOGGER.info("[selftest] progress: state " + state + ", timer " + timer + ", screen " + mc.screen);
+        }
+        if (total > 20 * 60 * 10 && state < 4) {
+            ModernEmotes.LOGGER.error("[selftest] BLENDEMOTES_SELFTEST_TIMEOUT in state " + state);
+            state = 4;
+            mc.stop();
+            return;
+        }
         switch (state) {
             case 0:
                 if (timer > 100 && mc.level == null) {

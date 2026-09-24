@@ -1,0 +1,142 @@
+// Build logic shared by the "legacy" Minecraft modules (MCP names, Forge + Legacy Fabric):
+// 1.8.9 and 1.12.2.
+//
+//     ext {
+//         minecraft = "1.12.2"
+//         mcVersion = 11202
+//         mcp = "39-1.12"                 // MCP stable mappings
+//         forge = "14.23.5.2864"          // MinecraftForge version (Unimined loader string)
+//         legacyFabricLoader = "0.16.13"
+//     }
+//     apply from: rootProject.file("gradle/legacy.gradle")
+//
+// Sources come from shared/legacy/<set> (preprocessed, see gradle/preprocess.gradle) plus the
+// module's own src/<set> folders. The shared code is written with MCP names and remapped to
+// SRG for Forge and to Legacy Fabric's intermediary for Fabric.
+
+ext.sharedRoot = rootProject.file("shared/legacy")
+ext.javaVersion = 8
+
+base {
+    archivesName = "blendemotes-mc${project.minecraft}"
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(8)
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = "UTF-8"
+}
+
+sourceSets {
+    fabric {
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.main.output
+    }
+    forge {
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.main.output
+    }
+}
+
+repositories {
+    maven { url = "https://repo.spongepowered.org/maven" }
+    mavenCentral()
+}
+
+unimined.minecraft {
+    version project.minecraft
+    mappings {
+        searge()
+        mcp("stable", project.mcp)
+    }
+    defaultRemapJar = false
+}
+
+unimined.minecraft(sourceSets.fabric) {
+    combineWith(sourceSets.main)
+    legacyFabric {
+        loader project.legacyFabricLoader
+    }
+    defaultRemapJar = true
+}
+
+unimined.minecraft(sourceSets.forge) {
+    combineWith(sourceSets.main)
+    minecraftForge {
+        loader project.forge
+    }
+    defaultRemapJar = true
+}
+
+configurations {
+    mainImplementation
+    implementation {
+        extendsFrom forgeImplementation
+        extendsFrom fabricImplementation
+    }
+}
+
+sourceSets {
+    main {
+        compileClasspath += configurations.mainImplementation
+        runtimeClasspath += configurations.mainImplementation
+    }
+}
+
+dependencies {
+    mainImplementation project(":core")
+    forgeImplementation project(":core")
+    fabricImplementation project(":core")
+    // mixins are only used by the Fabric side (Legacy Fabric ships Mixin)
+    fabricCompileOnly "org.spongepowered:mixin:0.8.5"
+}
+
+jar {
+    enabled = false
+}
+
+// The core (no Minecraft code) is copied into both mod jars.
+["fabricJar", "forgeJar"].each { name ->
+    tasks.matching { it.name == name }.configureEach {
+        from(project(":core").sourceSets.main.output)
+    }
+}
+
+apply from: rootProject.file("gradle/preprocess.gradle")
+preprocessSourceSet("main", [:])
+preprocessSourceSet("fabric", [FABRIC: 1])
+preprocessSourceSet("forge", [FORGE: 1])
+
+int mc = project.mcVersion as int
+def resourceProps = [
+        version   : project.version.toString(),
+        minecraft : project.minecraft.toString(),
+        packFormat: mc >= 11102 ? "3" : "1",
+]
+["main", "fabric", "forge"].each { l ->
+    tasks.named(sourceSets.getByName(l).processResourcesTaskName) {
+        inputs.properties(resourceProps)
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+        filesMatching(["fabric.mod.json", "mcmod.info", "pack.mcmeta"]) {
+            expand(resourceProps)
+        }
+        if (mc >= 11102) {
+            // language files are lower case since 1.11 (en_US.lang -> en_us.lang)
+            rename { String name -> name ==~ /[a-z]{2}_[A-Z]{2}\.lang/ ? name.toLowerCase() : name }
+        }
+    }
+}
+
+// CI self-test: ./gradlew :mc-<version>:forgeRunClient -Pselftest (the workflow also sets
+// BLENDEMOTES_SELFTEST=1, which the game reads too)
+tasks.withType(JavaExec).configureEach {
+    if (project.hasProperty("selftest") && name.toLowerCase().contains("client")) {
+        jvmArgs("-Dblendemotes.selftest=true", "-Dorg.lwjgl.opengl.Display.allowSoftwareOpenGL=true")
+    }
+}
+
+apply from: rootProject.file("gradle/apidump.gradle")
