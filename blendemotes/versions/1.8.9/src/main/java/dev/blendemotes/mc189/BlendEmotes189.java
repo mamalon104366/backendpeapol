@@ -20,6 +20,7 @@ import org.apache.logging.log4j.Logger;
 import org.lwjgl.input.Keyboard;
 
 import java.io.File;
+import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -124,21 +125,50 @@ public final class BlendEmotes189 {
     }
 
     /** Replaces the player renderers; needs the RenderManager, so it runs on the first tick. */
+    @SuppressWarnings("unchecked")
     private static void installRenderers(Minecraft mc) {
         RenderManager rm = mc.getRenderManager();
         if (rm == null) {
             return;
         }
-        Map<String, RenderPlayer> skins = rm.getSkinMap();
+        renderersInstalled = true;
+        // 1.8.9 has no getter for the skin map: find the private fields by type (their names
+        // differ between Forge and Fabric at runtime)
+        Map<String, RenderPlayer> skins = null;
+        Field defaultField = null;
+        for (Field f : RenderManager.class.getDeclaredFields()) {
+            try {
+                if (Map.class.isAssignableFrom(f.getType())) {
+                    f.setAccessible(true);
+                    Object value = f.get(rm);
+                    if (value instanceof Map && ((Map<?, ?>) value).get("default") instanceof RenderPlayer) {
+                        skins = (Map<String, RenderPlayer>) value;
+                    }
+                } else if (f.getType() == RenderPlayer.class) {
+                    f.setAccessible(true);
+                    defaultField = f;
+                }
+            } catch (Exception ex) {
+                LOGGER.warn("Could not inspect RenderManager field " + f.getName(), ex);
+            }
+        }
+        if (skins == null) {
+            LOGGER.error("BlendEmotes could not find the player renderers; emotes will not be visible");
+            return;
+        }
         RenderPlayer wide = skins.get("default");
         RenderPlayer slim = skins.get("slim");
-        if (!(wide instanceof EmoteRenderPlayer)) {
-            skins.put("default", new EmoteRenderPlayer(rm, false, wide));
+        EmoteRenderPlayer newWide = wide instanceof EmoteRenderPlayer ? (EmoteRenderPlayer) wide : new EmoteRenderPlayer(rm, false, wide);
+        EmoteRenderPlayer newSlim = slim instanceof EmoteRenderPlayer ? (EmoteRenderPlayer) slim : new EmoteRenderPlayer(rm, true, slim);
+        skins.put("default", newWide);
+        skins.put("slim", newSlim);
+        if (defaultField != null) {
+            try {
+                defaultField.set(rm, newWide);
+            } catch (Exception ex) {
+                LOGGER.warn("Could not replace the default player renderer", ex);
+            }
         }
-        if (!(slim instanceof EmoteRenderPlayer)) {
-            skins.put("slim", new EmoteRenderPlayer(rm, true, slim));
-        }
-        renderersInstalled = true;
         LOGGER.info("BlendEmotes player renderers installed");
     }
 

@@ -11,7 +11,6 @@ import net.minecraft.util.ResourceLocation;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
 
-import java.io.IOException;
 
 /** Radial emote menu: hold the key, point at an emote, release to play it. */
 public class EmoteWheelScreen extends GuiScreen {
@@ -99,7 +98,7 @@ public class EmoteWheelScreen extends GuiScreen {
     }
 
     @Override
-    protected void mouseClicked(int mouseX, int mouseY, int button) throws IOException {
+    protected void mouseClicked(int mouseX, int mouseY, int button) {
         if (button == 0) {
             select();
         } else if (button == 1) {
@@ -109,7 +108,7 @@ public class EmoteWheelScreen extends GuiScreen {
     }
 
     @Override
-    protected void keyTyped(char typedChar, int key) throws IOException {
+    protected void keyTyped(char typedChar, int key) {
         if (key == Keyboard.KEY_TAB) {
             done = true;
             mc.displayGuiScreen(new EmoteMenuScreen(null));

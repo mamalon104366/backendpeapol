@@ -13,7 +13,6 @@ import org.lwjgl.input.Mouse;
 
 import java.awt.Desktop;
 import java.io.File;
-import java.io.IOException;
 import java.util.List;
 
 /**
@@ -96,7 +95,7 @@ public class EmoteMenuScreen extends GuiScreen {
     }
 
     @Override
-    protected void actionPerformed(GuiButton button) throws IOException {
+    protected void actionPerformed(GuiButton button) {
         ClientEmotes client = client();
         if (client == null) {
             return;
@@ -145,7 +144,7 @@ public class EmoteMenuScreen extends GuiScreen {
     }
 
     @Override
-    protected void mouseClicked(int mouseX, int mouseY, int mouseButton) throws IOException {
+    protected void mouseClicked(int mouseX, int mouseY, int mouseButton) {
         if (mouseButton == 1) {
             for (GuiButton b : buttonList) {
                 if (b.id >= SLOT_BASE && b.id < SLOT_BASE + EmoteConfig.WHEEL_SLOTS && b.mousePressed(mc, mouseX, mouseY)) {
@@ -159,7 +158,7 @@ public class EmoteMenuScreen extends GuiScreen {
     }
 
     @Override
-    public void handleMouseInput() throws IOException {
+    public void handleMouseInput() {
         super.handleMouseInput();
         int wheel = Mouse.getEventDWheel();
         if (wheel != 0) {

@@ -28,10 +28,12 @@ jobs:
             17
             21
       - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: false
       - name: Core tests
         run: ./gradlew -PcoreOnly :core:check --stacktrace --console=plain
       - name: Build mods
-        run: ./gradlew build --stacktrace --console=plain
+        run: ./gradlew build --console=plain --continue
       - name: List run tasks
         if: always()
         run: ./gradlew :mc-1.8.9:tasks --all --console=plain | grep -i -E "^run|remap" || true

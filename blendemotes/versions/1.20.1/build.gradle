@@ -1,0 +1,109 @@
+plugins {
+    id "java"
+    id "xyz.wagyourtail.unimined" version "${unimined_version}"
+}
+
+base {
+    archivesName = "blendemotes-mc1.20.1"
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = "UTF-8"
+    options.release = 17
+}
+
+sourceSets {
+    fabric {
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.main.output
+    }
+    forge {
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.main.output
+    }
+}
+
+repositories {
+    maven { url = "https://repo.spongepowered.org/maven" }
+    mavenCentral()
+}
+
+// Shared code uses Mojang's official names.
+unimined.minecraft {
+    version "1.20.1"
+    mappings {
+        intermediary()
+        mojmap()
+    }
+    defaultRemapJar = false
+}
+
+unimined.minecraft(sourceSets.fabric) {
+    combineWith(sourceSets.main)
+    fabric {
+        loader "0.16.14"
+    }
+    defaultRemapJar = true
+}
+
+unimined.minecraft(sourceSets.forge) {
+    combineWith(sourceSets.main)
+    minecraftForge {
+        loader "47.4.0"
+        mixinConfig "blendemotes.mixins.json"
+    }
+    defaultRemapJar = true
+}
+
+configurations {
+    mainImplementation
+    implementation {
+        extendsFrom forgeImplementation
+        extendsFrom fabricImplementation
+    }
+}
+
+sourceSets {
+    main {
+        compileClasspath += configurations.mainImplementation
+        runtimeClasspath += configurations.mainImplementation
+    }
+}
+
+dependencies {
+    mainImplementation project(":core")
+    forgeImplementation project(":core")
+    fabricImplementation project(":core")
+    mainImplementation "org.spongepowered:mixin:0.8.5"
+    fabricModImplementation "net.fabricmc.fabric-api:fabric-api:0.92.6+1.20.1"
+}
+
+jar {
+    enabled = false
+}
+
+["fabricJar", "forgeJar"].each { name ->
+    tasks.matching { it.name == name }.configureEach {
+        from(project(":core").sourceSets.main.output)
+    }
+}
+
+processFabricResources {
+    inputs.property "version", project.version
+    filesMatching("fabric.mod.json") {
+        expand "version": project.version
+    }
+}
+
+processForgeResources {
+    inputs.property "version", project.version
+    filesMatching("META-INF/mods.toml") {
+        expand "version": project.version
+    }
+}
