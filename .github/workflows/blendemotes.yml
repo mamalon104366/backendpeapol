@@ -109,6 +109,12 @@ jobs:
           - project: mc-1.8.9
             dir: versions/1.8.9
             task: fabricRunClient
+          - project: mc-1.20.1
+            dir: versions/1.20.1
+            task: forgeRunClient
+          - project: mc-1.20.1
+            dir: versions/1.20.1
+            task: fabricRunClient
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -136,14 +142,14 @@ jobs:
       - name: Contact sheet (printed so it can be read from the log)
         if: always()
         run: |
-          shots=$(ls ${{ matrix.dir }}/run/screenshots/blendemotes_*.png 2>/dev/null | sort)
+          shots=$(find ${{ matrix.dir }}/run -name 'blendemotes_*.png' 2>/dev/null | sort)
           if [ -n "$shots" ]; then
             i=0
             for f in $shots; do
               i=$((i+1))
               convert "$f" -gravity center -crop 45%x85%+0+0 +repage -resize 220x220 "$(printf 'small_%02d' $i).jpg"
             done
-            ls ${{ matrix.dir }}/run/screenshots/
+            echo "$shots"
             montage small_*.jpg -tile 5x -geometry +2+2 -quality 70 sheet.jpg
             echo "SHEET_BEGIN"; base64 -w 120 sheet.jpg; echo "SHEET_END"
           else
@@ -155,6 +161,6 @@ jobs:
           name: selftest-${{ matrix.project }}-${{ matrix.task }}
           path: |
             blendemotes/selftest.log
-            blendemotes/${{ matrix.dir }}/run/screenshots/*.png
-            blendemotes/${{ matrix.dir }}/run/logs/latest.log
+            blendemotes/${{ matrix.dir }}/run/**/screenshots/*.png
+            blendemotes/${{ matrix.dir }}/run/**/logs/latest.log
           if-no-files-found: ignore

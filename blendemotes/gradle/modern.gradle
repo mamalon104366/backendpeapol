@@ -1,0 +1,174 @@
+// Build logic shared by the "modern" Minecraft modules (Mojang mappings, 1.16.5 and newer).
+//
+// A module's build.gradle only declares the plugins, then sets and applies:
+//
+//     ext {
+//         mcVersion = 12101          // 1.21.1 (major * 10000 + minor * 100 + patch; 26.3 -> 260300)
+//         minecraft = "1.21.1"
+//         javaVersion = 21
+//         fabricLoader = "0.16.14"
+//         fabricApi = "0.116.6+1.21.1"
+//         forge = "52.1.0"           // optional: MinecraftForge version (without the MC prefix)
+//         neoforge = "21.1.200"      // optional
+//         mcRange = "[1.21.1]"       // accepted Minecraft versions (Forge style)
+//         fabricMc = "~1.21.1"       // accepted Minecraft versions (Fabric style)
+//     }
+//     apply from: rootProject.file("gradle/modern.gradle")
+//
+// Sources come from shared/modern/<set> (preprocessed with //#if MC >= ..., see
+// gradle/preprocess.gradle) plus the module's own src/<set> folders.
+
+ext.sharedRoot = rootProject.file("shared/modern")
+
+def loaders = []
+if (project.findProperty("fabricLoader")) loaders << "fabric"
+if (project.findProperty("forge")) loaders << "forge"
+if (project.findProperty("neoforge")) loaders << "neoforge"
+ext.loaders = loaders
+
+base {
+    archivesName = "blendemotes-mc${project.minecraft}"
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(project.javaVersion as int)
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = "UTF-8"
+    options.release = project.javaVersion as int
+}
+
+sourceSets {
+    loaders.each { l ->
+        create(l) {
+            compileClasspath += sourceSets.main.output
+            runtimeClasspath += sourceSets.main.output
+        }
+    }
+}
+
+repositories {
+    maven { url = "https://repo.spongepowered.org/maven" }
+    maven { url = "https://maven.neoforged.net/releases" }
+    mavenCentral()
+}
+
+boolean obfuscated = (project.mcVersion as int) <= 12111
+
+unimined.minecraft {
+    version project.minecraft
+    if (obfuscated) {
+        mappings {
+            intermediary()
+            mojmap()
+        }
+    }
+    defaultRemapJar = false
+}
+
+if (loaders.contains("fabric")) {
+    unimined.minecraft(sourceSets.fabric) {
+        combineWith(sourceSets.main)
+        fabric {
+            loader project.fabricLoader
+        }
+        defaultRemapJar = true
+    }
+}
+
+if (loaders.contains("forge")) {
+    unimined.minecraft(sourceSets.forge) {
+        combineWith(sourceSets.main)
+        minecraftForge {
+            loader project.forge
+            mixinConfig "blendemotes.mixins.json"
+        }
+        defaultRemapJar = true
+    }
+}
+
+if (loaders.contains("neoforge")) {
+    unimined.minecraft(sourceSets.neoforge) {
+        combineWith(sourceSets.main)
+        neoForge {
+            loader project.neoforge
+            mixinConfig "blendemotes.mixins.json"
+        }
+        defaultRemapJar = true
+    }
+}
+
+configurations {
+    mainImplementation
+    implementation {
+        loaders.each { l -> extendsFrom configurations.getByName("${l}Implementation") }
+    }
+}
+
+sourceSets {
+    main {
+        compileClasspath += configurations.mainImplementation
+        runtimeClasspath += configurations.mainImplementation
+    }
+}
+
+dependencies {
+    mainImplementation project(":core")
+    mainImplementation "org.spongepowered:mixin:0.8.5"
+    loaders.each { l -> add("${l}Implementation", project(":core")) }
+    if (loaders.contains("fabric")) {
+        fabricModImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabricApi}"
+    }
+}
+
+jar {
+    enabled = false
+}
+
+// The core (no Minecraft code) is copied into every mod jar.
+loaders.each { l ->
+    tasks.matching { it.name == "${l}Jar" }.configureEach {
+        from(project(":core").sourceSets.main.output)
+    }
+}
+
+apply from: rootProject.file("gradle/preprocess.gradle")
+
+def flags = [FABRIC: 0, FORGE: 0, NEOFORGE: 0]
+preprocessSourceSet("main", flags)
+loaders.each { l ->
+    def f = new LinkedHashMap(flags)
+    f.put(l.toUpperCase(), 1)
+    preprocessSourceSet(l, f)
+}
+
+def resourceProps = [
+        version  : project.version.toString(),
+        minecraft: project.minecraft.toString(),
+        mcRange  : (project.findProperty("mcRange") ?: "[${project.minecraft}]").toString(),
+        fabricMc : (project.findProperty("fabricMc") ?: "~${project.minecraft}").toString(),
+        java     : project.javaVersion.toString(),
+        packFormat: (project.findProperty("packFormat") ?: "15").toString(),
+]
+(["main"] + loaders).each { l ->
+    tasks.named(sourceSets.getByName(l).processResourcesTaskName) {
+        inputs.properties(resourceProps)
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+        filesMatching(["fabric.mod.json", "META-INF/mods.toml", "META-INF/neoforge.mods.toml", "pack.mcmeta", "*.mixins.json"]) {
+            expand(resourceProps)
+        }
+    }
+}
+
+// CI self-test: ./gradlew :mc-<version>:<loader>RunClient -Pselftest (the workflow also sets
+// BLENDEMOTES_SELFTEST=1, which the game reads too)
+tasks.withType(JavaExec).configureEach {
+    if (project.hasProperty("selftest") && name.toLowerCase().contains("client")) {
+        jvmArgs("-Dblendemotes.selftest=true")
+    }
+}
+
+apply from: rootProject.file("gradle/apidump.gradle")

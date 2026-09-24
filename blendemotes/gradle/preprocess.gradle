@@ -99,41 +99,52 @@ def preprocessText(String text, Map<String, Integer> vars, String fileName) {
     return out.toString()
 }
 
-ext.preprocessSourceSet = { String setName, Map<String, Integer> loaderFlags ->
-    def vars = [MC: (project.mcVersion as int), FABRIC: 0, FORGE: 0, NEOFORGE: 0]
-    vars.putAll(loaderFlags)
-    def sharedDir = file("${project.sharedRoot}/$setName/java")
-    def outDir = layout.buildDirectory.dir("preprocessed/$setName/java").get().asFile
-    def task = tasks.register("preprocess${setName.capitalize()}") {
-        inputs.dir(sharedDir).optional()
-        inputs.property("vars", vars.toString())
-        outputs.dir(outDir)
-        doLast {
-            project.delete(outDir)
-            outDir.mkdirs()
-            if (!sharedDir.exists()) {
-                return
-            }
-            sharedDir.eachFileRecurse { f ->
-                if (f.isFile()) {
-                    def rel = sharedDir.toPath().relativize(f.toPath()).toString()
-                    def target = new File(outDir, rel)
-                    target.parentFile.mkdirs()
-                    if (f.name.endsWith(".java")) {
-                        target.setText(preprocessText(f.getText("UTF-8"), vars, rel), "UTF-8")
-                    } else {
-                        target.bytes = f.bytes
-                    }
-                }
+static boolean isText(String name) {
+    return name.endsWith(".java") || name.endsWith(".json") || name.endsWith(".toml")
+            || name.endsWith(".mcmeta") || name.endsWith(".cfg") || name.endsWith(".info")
+}
+
+// Copies `from` into `to`, preprocessing the text files.
+def preprocessTree(File from, File to, Map<String, Integer> vars) {
+    to.deleteDir()
+    to.mkdirs()
+    if (!from.exists()) {
+        return
+    }
+    from.eachFileRecurse { f ->
+        if (f.isFile()) {
+            def rel = from.toPath().relativize(f.toPath()).toString()
+            def target = new File(to, rel)
+            target.parentFile.mkdirs()
+            if (isText(f.name)) {
+                target.setText(preprocessText(f.getText("UTF-8"), vars, rel), "UTF-8")
+            } else {
+                target.bytes = f.bytes
             }
         }
     }
-    def sourceSet = sourceSets.getByName(setName)
-    sourceSet.java.srcDir(outDir)
+}
+
+ext.preprocessSourceSet = { String setName, Map<String, Integer> loaderFlags ->
+    def vars = [MC: (project.mcVersion as int), FABRIC: 0, FORGE: 0, NEOFORGE: 0]
+    vars.putAll(loaderFlags)
+    def sharedJava = file("${project.sharedRoot}/$setName/java")
     def sharedResources = file("${project.sharedRoot}/$setName/resources")
-    if (sharedResources.exists()) {
-        sourceSet.resources.srcDir(sharedResources)
+    def outJava = layout.buildDirectory.dir("preprocessed/$setName/java").get().asFile
+    def outResources = layout.buildDirectory.dir("preprocessed/$setName/resources").get().asFile
+    def task = tasks.register("preprocess${setName.capitalize()}") {
+        inputs.files(fileTree(sharedJava), fileTree(sharedResources))
+        inputs.property("vars", vars.toString())
+        outputs.dirs(outJava, outResources)
+        doLast {
+            preprocessTree(sharedJava, outJava, vars)
+            preprocessTree(sharedResources, outResources, vars)
+        }
     }
+    def sourceSet = sourceSets.getByName(setName)
+    sourceSet.java.srcDir(outJava)
+    sourceSet.resources.srcDir(outResources)
     tasks.named(sourceSet.compileJavaTaskName) { dependsOn task }
+    tasks.named(sourceSet.processResourcesTaskName) { dependsOn task }
     return task
 }
