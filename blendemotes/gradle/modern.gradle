@@ -38,7 +38,9 @@ java {
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = "UTF-8"
-    options.release = project.javaVersion as int
+    if ((project.javaVersion as int) > 8) {
+        options.release = project.javaVersion as int // javac 8 has no --release
+    }
 }
 
 sourceSets {
@@ -95,7 +97,9 @@ if (loaders.contains("neoforge")) {
         combineWith(sourceSets.main)
         neoForge {
             loader project.neoforge
-            mixinConfig "blendemotes.mixins.json"
+            if ((project.mcVersion as int) < 12005) {
+                mixinConfig "blendemotes.mixins.json" // newer NeoForge reads [[mixins]] in neoforge.mods.toml
+            }
         }
         defaultRemapJar = true
     }
@@ -145,13 +149,18 @@ loaders.each { l ->
     preprocessSourceSet(l, f)
 }
 
+int mc = project.mcVersion as int
+int javaLevel = project.javaVersion as int
 def resourceProps = [
-        version  : project.version.toString(),
-        minecraft: project.minecraft.toString(),
-        mcRange  : (project.findProperty("mcRange") ?: "[${project.minecraft}]").toString(),
-        fabricMc : (project.findProperty("fabricMc") ?: "~${project.minecraft}").toString(),
-        java     : project.javaVersion.toString(),
-        packFormat: (project.findProperty("packFormat") ?: "15").toString(),
+        version    : project.version.toString(),
+        minecraft  : project.minecraft.toString(),
+        mcRange    : (project.findProperty("mcRange") ?: "[${project.minecraft}]").toString(),
+        fabricMc   : (project.findProperty("fabricMc") ?: project.minecraft).toString(),
+        java       : javaLevel.toString(),
+        javaMixin  : javaLevel >= 21 ? "JAVA_21" : (javaLevel >= 17 ? "JAVA_17" : "JAVA_8"),
+        forgeMajor : (project.findProperty("forge") ?: "0").toString().tokenize(".")[0],
+        neoRange   : (project.findProperty("neoRange") ?: "[1,)").toString(),
+        packFormat : (project.findProperty("packFormat") ?: "15").toString(),
 ]
 (["main"] + loaders).each { l ->
     tasks.named(sourceSets.getByName(l).processResourcesTaskName) {
@@ -159,6 +168,12 @@ def resourceProps = [
         duplicatesStrategy = DuplicatesStrategy.EXCLUDE
         filesMatching(["fabric.mod.json", "META-INF/mods.toml", "META-INF/neoforge.mods.toml", "pack.mcmeta", "*.mixins.json"]) {
             expand(resourceProps)
+        }
+        if (l == "forge" && mc > 12001) {
+            exclude "pack.mcmeta" // newer Forge generates the mod's pack metadata
+        }
+        if (l == "neoforge" && mc < 12005) {
+            rename "neoforge.mods.toml", "mods.toml" // NeoForge for 1.20.4 still reads mods.toml
         }
     }
 }

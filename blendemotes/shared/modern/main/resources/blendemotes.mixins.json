@@ -1,0 +1,18 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "dev.blendemotes.modern.mixin",
+  "compatibilityLevel": "${javaMixin}",
+  "client": [
+    "CapeLayerMixin",
+    "ElytraLayerMixin",
+    "HumanoidArmorLayerMixin",
+    "KeyMappingAccessor",
+    "LivingEntityRendererMixin",
+    "ModelPartMixin",
+    "PlayerModelMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
