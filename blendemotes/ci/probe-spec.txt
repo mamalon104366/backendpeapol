@@ -28,6 +28,25 @@ net.minecraft.client.renderer.SubmitNodeCollector
 net.minecraft.client.renderer.SubmitNodeCollection
 net.minecraft.client.renderer.OrderedSubmitNodeCollector
 com.mojang.blaze3d.vertex.VertexConsumer
+com.mojang.math.Matrix4f
+com.mojang.math.Matrix3f
+com.mojang.math.Vector4f
+com.mojang.math.Vector3f
+com.mojang.math.Quaternion
+com.mojang.math.Axis | XP|YP|ZP|rotation
+com.mojang.math.Vector3f | XP|YP|ZP|rotation
+net.minecraft.client.model.geom.PartPose | <init>|offset|ZERO|x|y|z
+net.minecraft.client.renderer.entity.LivingEntityRenderer #code \b(render|submit)\(
+net.minecraft.client.model.PlayerModel #code setupAnim|<init>|translateToHand
+net.minecraft.client.model.HumanoidModel #code setupAnim|translateToHand
+net.minecraft.client.renderer.entity.layers.CapeLayer #code render|submit
+net.minecraft.client.model.geom.ModelPart #code render|compile|translateAndRotate|copyFrom|resetPose|loadPose|visit
+net.minecraft.client.renderer.entity.player.PlayerRenderer #code render|submit|extractRenderState|renderHand|setModelProperties
+net.minecraft.client.renderer.entity.player.AvatarRenderer #code render|submit|extractRenderState|renderHand|setModelProperties
+net.minecraft.client.renderer.entity.LivingEntityRenderer #code extractRenderState
+net.minecraft.client.renderer.entity.layers.WingsLayer #code render|submit
+net.minecraft.client.renderer.entity.layers.ElytraLayer #code render|submit
+net.minecraft.client.renderer.entity.layers.HumanoidArmorLayer #code render|submit|renderArmorPiece
 com.mojang.blaze3d.vertex.PoseStack
 com.mojang.blaze3d.vertex.PoseStack$Pose
 net.minecraft.client.renderer.RenderType | entitySolid|entityCutout|entityTranslucent|armorCutout|text\(|gui\(

@@ -13,6 +13,7 @@
 //     find: <regex>                  list matching class names
 //     <class>                        javap the class
 //     <class> | <regex>              javap the class, only members matching the regex
+//     <class> #code <regex>          the calls/field accesses made by the methods matching the regex
 
 tasks.register("apiDump") {
     group = "help"
@@ -73,6 +74,37 @@ tasks.register("apiDump") {
             }
         }
 
+        def code = { String setName, String cls, String methodRegex ->
+            def jars = jarsOf(setName)
+            if (jars == null) {
+                println("APIDUMP (no source set $setName)")
+                return
+            }
+            def out = new ByteArrayOutputStream()
+            project.exec {
+                commandLine javap, "-p", "-c", "-cp", jars.collect { it.absolutePath }.join(File.pathSeparator), cls
+                standardOutput = out
+                errorOutput = out
+                ignoreExitValue = true
+            }
+            println("APIDUMP ===== [$setName] $cls code of /$methodRegex/")
+            def pattern = java.util.regex.Pattern.compile(methodRegex)
+            boolean inside = false
+            out.toString("UTF-8").eachLine { line ->
+                if (line.startsWith("  ") && !line.startsWith("   ") && line.contains("(")) {
+                    inside = pattern.matcher(line).find()
+                    if (inside) {
+                        println("APIDUMP " + line)
+                    }
+                } else if (inside && (line.contains("invoke") || line.contains("field") || line.contains("ldc"))) {
+                    int comment = line.indexOf("// ")
+                    println("APIDUMP       " + (comment >= 0 ? line.substring(comment + 3) : line.trim()))
+                } else if (line.startsWith("Error")) {
+                    println("APIDUMP " + line)
+                }
+            }
+        }
+
         String setName = (project.findProperty("apiSet") ?: "main").toString()
         if (project.findProperty("apiFind")) {
             find(setName, project.findProperty("apiFind").toString())
@@ -92,6 +124,9 @@ tasks.register("apiDump") {
                     setName = line.substring(5).trim()
                 } else if (line.startsWith("find:")) {
                     find(setName, line.substring(5).trim())
+                } else if (line.contains(" #code ")) {
+                    int at = line.indexOf(" #code ")
+                    code(setName, line.substring(0, at).trim(), line.substring(at + 7).trim())
                 } else {
                     int bar = line.indexOf(" | ")
                     if (bar < 0) {
