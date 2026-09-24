@@ -84,6 +84,9 @@ jobs:
         if: steps.check.outputs.run == 'true'
         with:
           cache-read-only: false
+      - name: Loader versions
+        if: steps.check.outputs.run == 'true'
+        run: bash ci/versions.sh || true
       - name: API dump
         if: steps.check.outputs.run == 'true'
         run: |
