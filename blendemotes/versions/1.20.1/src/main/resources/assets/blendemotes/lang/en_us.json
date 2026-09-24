@@ -1,0 +1,15 @@
+{
+  "key.categories.blendemotes": "BlendEmotes",
+  "key.blendemotes.wheel": "Emote wheel (hold)",
+  "key.blendemotes.menu": "Emote menu",
+  "key.blendemotes.stop": "Stop emote",
+  "blendemotes.wheel.title": "Emotes",
+  "blendemotes.wheel.edit": "Right click / TAB: edit",
+  "blendemotes.menu.title": "BlendEmotes",
+  "blendemotes.menu.reload": "Reload",
+  "blendemotes.menu.folder": "Open folder",
+  "blendemotes.menu.play": "Play",
+  "blendemotes.menu.hint": "Pick an emote, then a wheel slot (right click a slot to clear it)",
+  "blendemotes.menu.selected": "Selected: %s - now click a wheel slot",
+  "blendemotes.menu.errors": "%s emote file(s) could not be loaded (see log)"
+}

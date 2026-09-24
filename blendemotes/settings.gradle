@@ -23,7 +23,7 @@ include "core"
 // -PcoreOnly on machines without access to them.
 if (!providers.gradleProperty("coreOnly").isPresent()) {
     def only = providers.gradleProperty("mcVersions").getOrElse("")
-    def versions = ["1.8.9"]
+    def versions = ["1.8.9", "1.20.1"]
     versions.each { v ->
         if (only.isEmpty() || only.split(",").contains(v)) {
             include "mc-$v"

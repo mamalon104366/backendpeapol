@@ -1,0 +1,15 @@
+{
+  "key.categories.blendemotes": "BlendEmotes",
+  "key.blendemotes.wheel": "Rueda de emotes (mantener)",
+  "key.blendemotes.menu": "Menú de emotes",
+  "key.blendemotes.stop": "Detener emote",
+  "blendemotes.wheel.title": "Emotes",
+  "blendemotes.wheel.edit": "Clic derecho / TAB: editar",
+  "blendemotes.menu.title": "BlendEmotes",
+  "blendemotes.menu.reload": "Recargar",
+  "blendemotes.menu.folder": "Abrir carpeta",
+  "blendemotes.menu.play": "Reproducir",
+  "blendemotes.menu.hint": "Elige un emote y luego una casilla de la rueda (clic derecho en una casilla para vaciarla)",
+  "blendemotes.menu.selected": "Seleccionado: %s - ahora haz clic en una casilla",
+  "blendemotes.menu.errors": "%s archivo(s) de emote no se pudieron cargar (mira el log)"
+}

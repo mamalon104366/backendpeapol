@@ -19,4 +19,10 @@ public interface BendablePart {
     boolean blendemotes$dirty();
 
     void blendemotes$clear();
+
+    double blendemotes$bend();
+
+    Vec3 blendemotes$joint();
+
+    float[] blendemotes$scale();
 }
