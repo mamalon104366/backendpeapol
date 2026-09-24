@@ -53,6 +53,12 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           cache-read-only: false
+      - uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository/xyz/wagyourtail
+          key: unimined-${{ hashFiles('blendemotes/tools/unimined/build.sh', 'blendemotes/gradle.properties') }}
+      - name: Unimined plugin (pinned lts/1.4 build)
+        run: bash tools/unimined/build.sh
       - name: Build mod jars
         run: ./gradlew -PmcVersions=${{ matrix.mc }} build --console=plain --continue
       - uses: actions/upload-artifact@v4
@@ -102,6 +108,12 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           cache-read-only: false
+      - uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository/xyz/wagyourtail
+          key: unimined-${{ hashFiles('blendemotes/tools/unimined/build.sh', 'blendemotes/gradle.properties') }}
+      - name: Unimined plugin (pinned lts/1.4 build)
+        run: bash tools/unimined/build.sh
       - name: API dump
         run: |
           grep -E "^${{ matrix.mc }}:" ci/probe.txt | cut -d: -f2- | sed "s/^ *//" | while IFS= read -r line; do
@@ -151,6 +163,12 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           cache-read-only: false
+      - uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository/xyz/wagyourtail
+          key: unimined-${{ hashFiles('blendemotes/tools/unimined/build.sh', 'blendemotes/gradle.properties') }}
+      - name: Unimined plugin (pinned lts/1.4 build)
+        run: bash tools/unimined/build.sh
       - name: Install virtual display
         run: sudo apt-get update -q && sudo apt-get install -y -q xvfb x11-xserver-utils libgl1-mesa-dri libglx-mesa0 mesa-utils libxrandr2 libxcursor1 libxi6 libxxf86vm1 libopenal1
       - name: Run Minecraft self-test

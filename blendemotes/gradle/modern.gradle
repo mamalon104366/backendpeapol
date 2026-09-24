@@ -7,7 +7,7 @@
 //         minecraft = "1.21.1"
 //         javaVersion = 21
 //         fabricLoader = "0.16.14"
-//         fabricApi = "0.116.6+1.21.1"
+//         fabricApiVersion = "0.116.6+1.21.1"
 //         forge = "52.1.0"           // optional: MinecraftForge version (without the MC prefix)
 //         neoforge = "21.1.200"      // optional
 //         mcRange = "[1.21.1]"       // accepted Minecraft versions (Forge style)
@@ -19,6 +19,10 @@
 // gradle/preprocess.gradle) plus the module's own src/<set> folders.
 
 ext.sharedRoot = rootProject.file("shared/modern")
+
+// Fabric API modules the mod depends on (also listed in fabric.mod.json).
+ext.FABRIC_API_MODULES = ["fabric-api-base", "fabric-networking-api-v1", "fabric-lifecycle-events-v1",
+                          "fabric-key-binding-api-v1"]
 
 def loaders = []
 if (project.findProperty("fabricLoader")) loaders << "fabric"
@@ -136,7 +140,10 @@ dependencies {
     mainImplementation "org.spongepowered:mixin:0.8.5"
     loaders.each { l -> add("${l}Implementation", project(":core")) }
     if (loaders.contains("fabric")) {
-        fabricModImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabricApi}"
+        // only the Fabric API modules the mod uses (players with the full Fabric API have them)
+        FABRIC_API_MODULES.each {
+            fabricModImplementation unimined.fabricApi.module(it, project.fabricApiVersion.toString())
+        }
     }
 }
 

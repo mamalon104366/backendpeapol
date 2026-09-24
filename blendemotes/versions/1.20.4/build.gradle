@@ -9,7 +9,7 @@ ext {
     mcVersion = 12004
     javaVersion = 17
     fabricLoader = "0.19.5"
-    fabricApi = "0.97.3+1.20.4"
+    fabricApiVersion = "0.97.3+1.20.4"
     forge = "49.2.9"
     neoforge = "net.neoforged:neoforge:20.4.251:universal"
 }

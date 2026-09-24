@@ -9,7 +9,7 @@ ext {
     mcVersion = 12001
     javaVersion = 17
     fabricLoader = "0.19.5"
-    fabricApi = "0.92.12+1.20.1"
+    fabricApiVersion = "0.92.12+1.20.1"
     forge = "47.4.23"
 }
 

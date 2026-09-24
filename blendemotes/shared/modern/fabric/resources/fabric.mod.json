@@ -14,7 +14,10 @@
   "mixins": ["blendemotes.mixins.json"],
   "depends": {
     "fabricloader": ">=0.14.21",
-    "fabric-api": "*",
+    "fabric-api-base": "*",
+    "fabric-networking-api-v1": "*",
+    "fabric-lifecycle-events-v1": "*",
+    "fabric-key-binding-api-v1": "*",
     "minecraft": "${fabricMc}",
     "java": ">=${java}"
   }
