@@ -156,7 +156,9 @@ jobs:
           BLENDEMOTES_SELFTEST: "1"
         run: |
           timeout 1200 xvfb-run -a -s "-screen 0 1280x720x24" ./gradlew :${{ matrix.project }}:${{ matrix.task }} -Pselftest --console=plain > selftest.log 2>&1 || echo "run exited with $?"
-          grep -E "selftest|BlendEmotes|Exception|Error|error" selftest.log | head -200 || true
+          grep -E "selftest|BlendEmotes" selftest.log | head -200 || true
+          echo "----- exceptions with context -----"
+          grep -n -B4 -A20 -E "Exception|FATAL|Mixin apply failed|InvalidInjection" selftest.log | cut -c1-400 | head -600 || true
           echo "----- last lines -----"
           tail -60 selftest.log | cut -c1-400 || true
           grep -q BLENDEMOTES_SELFTEST_DONE selftest.log
