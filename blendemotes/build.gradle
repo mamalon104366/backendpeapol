@@ -1,0 +1,13 @@
+allprojects {
+    group = rootProject.maven_group
+    version = rootProject.mod_version
+}
+
+subprojects {
+    repositories {
+        mavenCentral()
+    }
+    tasks.withType(JavaCompile).configureEach {
+        options.encoding = "UTF-8"
+    }
+}

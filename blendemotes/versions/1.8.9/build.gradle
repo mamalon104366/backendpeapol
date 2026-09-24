@@ -1,0 +1,110 @@
+plugins {
+    id "java"
+    id "xyz.wagyourtail.unimined" version "${unimined_version}"
+}
+
+base {
+    archivesName = "blendemotes-mc1.8.9"
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(8)
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = "UTF-8"
+}
+
+sourceSets {
+    fabric {
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.main.output
+    }
+    forge {
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.main.output
+    }
+}
+
+repositories {
+    maven { url = "https://maven.wagyourtail.xyz/releases" }
+    maven { url = "https://repo.spongepowered.org/maven" }
+    mavenCentral()
+}
+
+// Shared code is written with MCP (stable_22) names and remapped to SRG for Forge and to
+// Legacy Fabric's intermediary for Fabric.
+unimined.minecraft {
+    version "1.8.9"
+    mappings {
+        searge()
+        mcp("stable", "22-1.8.9")
+    }
+    defaultRemapJar = false
+}
+
+unimined.minecraft(sourceSets.fabric) {
+    combineWith(sourceSets.main)
+    legacyFabric {
+        loader "0.16.13"
+    }
+    defaultRemapJar = true
+}
+
+unimined.minecraft(sourceSets.forge) {
+    combineWith(sourceSets.main)
+    minecraftForge {
+        loader "11.15.1.2318-1.8.9"
+    }
+    defaultRemapJar = true
+}
+
+configurations {
+    mainImplementation
+    implementation {
+        extendsFrom forgeImplementation
+        extendsFrom fabricImplementation
+    }
+}
+
+sourceSets {
+    main {
+        compileClasspath += configurations.mainImplementation
+        runtimeClasspath += configurations.mainImplementation
+    }
+}
+
+dependencies {
+    mainImplementation project(":core")
+    forgeImplementation project(":core")
+    fabricImplementation project(":core")
+    // mixins are only used by the Fabric side (Legacy Fabric ships Mixin)
+    fabricCompileOnly "org.spongepowered:mixin:0.8.5"
+}
+
+jar {
+    enabled = false
+}
+
+// The core (no Minecraft code) is copied into both mod jars.
+["fabricJar", "forgeJar"].each { name ->
+    tasks.matching { it.name == name }.configureEach {
+        from(project(":core").sourceSets.main.output)
+    }
+}
+
+processFabricResources {
+    inputs.property "version", project.version
+    filesMatching("fabric.mod.json") {
+        expand "version": project.version
+    }
+}
+
+processForgeResources {
+    inputs.property "version", project.version
+    filesMatching("mcmod.info") {
+        expand "version": project.version
+    }
+}

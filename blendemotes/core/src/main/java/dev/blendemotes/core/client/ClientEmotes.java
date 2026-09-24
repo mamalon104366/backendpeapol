@@ -220,6 +220,12 @@ public final class ClientEmotes {
         return p.evaluate(platform.clock(), vanilla, RigDefinition.minecraft(slim), lifeTime, out);
     }
 
+    /** Whole-player transform for this frame; false when the player is not emoting. */
+    public boolean root(UUID player, boolean slim, dev.blendemotes.core.math.Mat4 out) {
+        EmotePlayer p = players.get(player);
+        return p != null && p.evaluateRoot(platform.clock(), RigDefinition.minecraft(slim), out);
+    }
+
     public boolean isEmoting(UUID player) {
         EmotePlayer p = players.get(player);
         return p != null && p.current() != null;

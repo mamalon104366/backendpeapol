@@ -103,6 +103,13 @@ public final class EmoteServer {
             case Packets.C_HELLO:
                 s.supported = true;
                 bridge.send(player, Packets.hello(true));
+                // catch up on the emotes other players are already playing
+                for (Map.Entry<UUID, State> e : players.entrySet()) {
+                    State other = e.getValue();
+                    if (!e.getKey().equals(player) && other.emote != null) {
+                        bridge.send(player, Packets.playOf(e.getKey(), other.emote, elapsed(other)));
+                    }
+                }
                 break;
             case Packets.C_PLAY:
                 onPlay(player, s, p);

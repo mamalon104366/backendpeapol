@@ -2,6 +2,7 @@ package dev.blendemotes.core.emote;
 
 import dev.blendemotes.core.anim.Animation;
 import dev.blendemotes.core.anim.molang.Molang;
+import dev.blendemotes.core.math.Mat4;
 import dev.blendemotes.core.pose.PlayerPose;
 import dev.blendemotes.core.pose.PoseEvaluator;
 import dev.blendemotes.core.pose.VanillaPose;
@@ -103,6 +104,24 @@ public final class EmotePlayer {
 
     private static double smooth(double x) {
         return x * x * (3 - 2 * x);
+    }
+
+    /**
+     * Transform of the whole player (the rig's "body" bone) blended with the fade weight,
+     * without evaluating the parts. Renderers need it before the model pose is known.
+     *
+     * @return false when no emote is playing
+     */
+    public boolean evaluateRoot(double now, RigDefinition rig, Mat4 out) {
+        if (!update(now)) {
+            return false;
+        }
+        Animation anim = emote.animation;
+        double t = anim.animationTime(Math.max(0, now - start));
+        Mat4 root = PoseEvaluator.rootTransform(anim, t, rig);
+        double w = weight(now);
+        out.set(w >= 1 ? root : PlayerPose.blendMatrix(new Mat4(), root, rig.bodyPivot, w));
+        return true;
     }
 
     /**

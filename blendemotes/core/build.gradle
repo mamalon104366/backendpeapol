@@ -1,0 +1,26 @@
+plugins {
+    id "java-library"
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    // Minecraft 1.8.9 - 1.16.5 run on Java 8
+    options.release = 8
+    options.compilerArgs += ["-Xlint:all", "-Xlint:-options", "-Xlint:-serial"]
+}
+
+// Dependency free tests (see TestRunner): the build must work without extra downloads.
+def coreTest = tasks.register("coreTest", JavaExec) {
+    group = "verification"
+    description = "Runs the core tests (Blender parity, skinning, codec, protocol...)"
+    dependsOn tasks.named("testClasses")
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = "dev.blendemotes.core.TestRunner"
+}
+tasks.named("check") { dependsOn coreTest }
+tasks.named("test") { enabled = false }

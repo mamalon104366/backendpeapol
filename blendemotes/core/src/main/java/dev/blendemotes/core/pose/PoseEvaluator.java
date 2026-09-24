@@ -59,6 +59,11 @@ public final class PoseEvaluator {
         return out;
     }
 
+    /** Transform of the "body" root bone only. */
+    public static Mat4 rootTransform(Animation anim, double time, RigDefinition rig) {
+        return new PoseEvaluator(anim, time, new VanillaPose(), rig, Molang.ZERO_CONTEXT).local(BODY);
+    }
+
     /** For tests and tools: access to intermediate bone transforms. */
     static PoseEvaluator create(Animation anim, double time, VanillaPose vanilla, RigDefinition rig) {
         return new PoseEvaluator(anim, time, vanilla, rig, Molang.ZERO_CONTEXT);
