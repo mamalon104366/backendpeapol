@@ -1,0 +1,139 @@
+// Minimal source preprocessor: one shared source tree, compiled for many Minecraft versions.
+//
+// In shared .java files:
+//     //#if MC >= 12004
+//     ...code for 1.20.4 and newer...
+//     //#elseif MC >= 12002 && FABRIC
+//     ...
+//     //#else
+//     ...
+//     //#endif
+//
+// Conditions support MC (e.g. 10809 = 1.8.9, 12001 = 1.20.1, 260300 = 26.3), the loader flags
+// FABRIC / FORGE / NEOFORGE (true only in that loader's source set), ==, !=, <, <=, >, >=, &&,
+// || and !. Inactive lines are blanked (not removed) so compiler errors keep the line numbers
+// of the shared file.
+//
+// A version module sets `ext.mcVersion` and `ext.sharedRoot`, then applies this script.
+
+def evalCondition(String expr, Map<String, Integer> vars) {
+    def e = expr.trim()
+    if (e.contains("||")) {
+        return e.split(/\|\|/).any { evalCondition(it, vars) }
+    }
+    if (e.contains("&&")) {
+        return e.split(/&&/).every { evalCondition(it, vars) }
+    }
+    if (e.startsWith("!")) {
+        return !evalCondition(e.substring(1), vars)
+    }
+    if (e.startsWith("(") && e.endsWith(")")) {
+        return evalCondition(e.substring(1, e.length() - 1), vars)
+    }
+    def m = e =~ /^([A-Za-z_]+)\s*(==|!=|<=|>=|<|>)\s*(-?\d+)$/
+    if (m.matches()) {
+        def name = m.group(1)
+        if (!vars.containsKey(name)) {
+            throw new GradleException("preprocess: unknown variable '$name' in '$expr'")
+        }
+        int left = vars[name]
+        int right = Integer.parseInt(m.group(3))
+        switch (m.group(2)) {
+            case "==": return left == right
+            case "!=": return left != right
+            case "<=": return left <= right
+            case ">=": return left >= right
+            case "<": return left < right
+            case ">": return left > right
+        }
+    }
+    if (vars.containsKey(e)) {
+        return vars[e] != 0
+    }
+    throw new GradleException("preprocess: cannot evaluate '$expr'")
+}
+
+def preprocessText(String text, Map<String, Integer> vars, String fileName) {
+    def out = new StringBuilder()
+    // stack entries: [parentActive, branchTaken, currentActive]
+    def stack = []
+    boolean active = true
+    int lineNo = 0
+    text.eachLine { line ->
+        lineNo++
+        def t = line.trim()
+        if (t.startsWith("//#if ")) {
+            boolean cond = evalCondition(t.substring(6), vars)
+            stack.push([active, cond, active && cond])
+            active = active && cond
+            out.append("\n")
+        } else if (t.startsWith("//#elseif ")) {
+            if (stack.isEmpty()) throw new GradleException("preprocess: $fileName:$lineNo #elseif without #if")
+            def top = stack.pop()
+            boolean parent = top[0]
+            boolean taken = top[1]
+            boolean cond = !taken && evalCondition(t.substring(10), vars)
+            stack.push([parent, taken || cond, parent && cond])
+            active = parent && cond
+            out.append("\n")
+        } else if (t == "//#else") {
+            if (stack.isEmpty()) throw new GradleException("preprocess: $fileName:$lineNo #else without #if")
+            def top = stack.pop()
+            boolean parent = top[0]
+            boolean taken = top[1]
+            stack.push([parent, true, parent && !taken])
+            active = parent && !taken
+            out.append("\n")
+        } else if (t == "//#endif") {
+            if (stack.isEmpty()) throw new GradleException("preprocess: $fileName:$lineNo #endif without #if")
+            def top = stack.pop()
+            active = top[0]
+            out.append("\n")
+        } else {
+            out.append(active ? line : "").append("\n")
+        }
+    }
+    if (!stack.isEmpty()) {
+        throw new GradleException("preprocess: $fileName: missing #endif")
+    }
+    return out.toString()
+}
+
+ext.preprocessSourceSet = { String setName, Map<String, Integer> loaderFlags ->
+    def vars = [MC: (project.mcVersion as int), FABRIC: 0, FORGE: 0, NEOFORGE: 0]
+    vars.putAll(loaderFlags)
+    def sharedDir = file("${project.sharedRoot}/$setName/java")
+    def outDir = layout.buildDirectory.dir("preprocessed/$setName/java").get().asFile
+    def task = tasks.register("preprocess${setName.capitalize()}") {
+        inputs.dir(sharedDir).optional()
+        inputs.property("vars", vars.toString())
+        outputs.dir(outDir)
+        doLast {
+            project.delete(outDir)
+            outDir.mkdirs()
+            if (!sharedDir.exists()) {
+                return
+            }
+            sharedDir.eachFileRecurse { f ->
+                if (f.isFile()) {
+                    def rel = sharedDir.toPath().relativize(f.toPath()).toString()
+                    def target = new File(outDir, rel)
+                    target.parentFile.mkdirs()
+                    if (f.name.endsWith(".java")) {
+                        target.setText(preprocessText(f.getText("UTF-8"), vars, rel), "UTF-8")
+                    } else {
+                        target.bytes = f.bytes
+                    }
+                }
+            }
+        }
+    }
+    def sourceSet = sourceSets.getByName(setName)
+    sourceSet.java.srcDir(outDir)
+    def sharedResources = file("${project.sharedRoot}/$setName/resources")
+    if (sharedResources.exists()) {
+        sourceSet.resources.srcDir(sharedResources)
+    }
+    tasks.named(sourceSet.compileJavaTaskName) { dependsOn task }
+    return task
+}

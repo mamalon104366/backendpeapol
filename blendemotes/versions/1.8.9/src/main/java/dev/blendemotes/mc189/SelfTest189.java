@@ -16,7 +16,8 @@ import net.minecraft.world.WorldType;
  * world, plays the built-in emotes in front of the camera, saves screenshots and quits.
  */
 final class SelfTest189 {
-    private static final boolean ENABLED = Boolean.getBoolean("blendemotes.selftest");
+    private static final boolean ENABLED = Boolean.getBoolean("blendemotes.selftest")
+            || "1".equals(System.getenv("BLENDEMOTES_SELFTEST"));
     private static final String[] EMOTES = {"Inchworm", "Cartwheel"};
     private static final int[] SHOTS = {6, 12, 18, 24};
     private static int state;

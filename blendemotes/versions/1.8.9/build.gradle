@@ -109,9 +109,10 @@ processForgeResources {
     }
 }
 
-// CI self-test: ./gradlew :mc-1.8.9:forgeRunClient -Pselftest
-tasks.matching { it.name.endsWith("RunClient") || it.name == "runClient" }.configureEach {
-    if (project.hasProperty("selftest")) {
-        jvmArgs "-Dblendemotes.selftest=true", "-Dorg.lwjgl.opengl.Display.allowSoftwareOpenGL=true"
+// CI self-test: ./gradlew :mc-1.8.9:forgeRunClient -Pselftest (the workflow also sets
+// BLENDEMOTES_SELFTEST=1, which the game reads too)
+tasks.withType(JavaExec).configureEach {
+    if (project.hasProperty("selftest") && name.toLowerCase().contains("client")) {
+        jvmArgs("-Dblendemotes.selftest=true", "-Dorg.lwjgl.opengl.Display.allowSoftwareOpenGL=true")
     }
 }

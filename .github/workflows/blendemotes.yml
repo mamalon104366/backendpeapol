@@ -76,9 +76,12 @@ jobs:
       - name: Run Minecraft self-test
         env:
           LIBGL_ALWAYS_SOFTWARE: "1"
+          BLENDEMOTES_SELFTEST: "1"
         run: |
           timeout 1500 xvfb-run -a -s "-screen 0 1280x720x24" ./gradlew :${{ matrix.project }}:${{ matrix.task }} -Pselftest --console=plain > selftest.log 2>&1 || echo "run exited with $?"
           grep -E "selftest|BlendEmotes|Exception|Error|error" selftest.log | head -200 || true
+          echo "----- last lines -----"
+          tail -60 selftest.log | cut -c1-400 || true
           grep -q BLENDEMOTES_SELFTEST_DONE selftest.log
       - name: Contact sheet (printed so it can be read from the log)
         if: always()
