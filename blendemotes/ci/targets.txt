@@ -10,3 +10,5 @@
 1.21.1   forge fabric neoforge
 1.21.4   forge fabric neoforge
 1.21.8   forge fabric neoforge
+1.21.10  forge fabric neoforge
+1.21.11  forge fabric neoforge

@@ -43,9 +43,14 @@ public final class ModernEmotes {
         void send(byte[] payload);
     }
 
-    public static final KeyMapping KEY_WHEEL = new KeyMapping("key.blendemotes.wheel", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_B, "key.categories.blendemotes");
-    public static final KeyMapping KEY_MENU = new KeyMapping("key.blendemotes.menu", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_N, "key.categories.blendemotes");
-    public static final KeyMapping KEY_STOP = new KeyMapping("key.blendemotes.stop", InputConstants.Type.KEYSYM, InputConstants.UNKNOWN.getValue(), "key.categories.blendemotes");
+    //#if MC >= 12109
+    private static final KeyMapping.Category KEY_CATEGORY = KeyMapping.Category.register(Compat.id(MOD_ID, "main"));
+    //#else
+    private static final String KEY_CATEGORY = "key.categories.blendemotes";
+    //#endif
+    public static final KeyMapping KEY_WHEEL = new KeyMapping("key.blendemotes.wheel", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_B, KEY_CATEGORY);
+    public static final KeyMapping KEY_MENU = new KeyMapping("key.blendemotes.menu", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_N, KEY_CATEGORY);
+    public static final KeyMapping KEY_STOP = new KeyMapping("key.blendemotes.stop", InputConstants.Type.KEYSYM, InputConstants.UNKNOWN.getValue(), KEY_CATEGORY);
 
     private static ClientEmotes client;
     private static Sender sender;

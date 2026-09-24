@@ -3,6 +3,10 @@ package dev.blendemotes.modern.gui;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+//#if MC >= 12109
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
+//#endif
 //#if MC >= 12000
 import net.minecraft.client.gui.GuiGraphics;
 //#else
@@ -90,10 +94,17 @@ abstract class BaseScreen extends Screen {
     }
     //#endif
 
+    //#if MC >= 12109
+    @Override
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        return click(event.x(), event.y(), event.button()) || super.mouseClicked(event, doubleClick);
+    }
+    //#else
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         return click(mouseX, mouseY, button) || super.mouseClicked(mouseX, mouseY, button);
     }
+    //#endif
 
     //#if MC >= 12002
     @Override
@@ -107,10 +118,17 @@ abstract class BaseScreen extends Screen {
     }
     //#endif
 
+    //#if MC >= 12109
+    @Override
+    public boolean keyPressed(KeyEvent event) {
+        return key(event.key()) || super.keyPressed(event);
+    }
+    //#else
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         return key(keyCode) || super.keyPressed(keyCode, scanCode, modifiers);
     }
+    //#endif
 
     @Override
     public boolean isPauseScreen() {

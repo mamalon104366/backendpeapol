@@ -4,14 +4,16 @@ import dev.blendemotes.modern.net.EmotePayload;
 import dev.blendemotes.modern.net.ServerRelay;
 import net.minecraft.network.protocol.PacketFlow;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.network.PacketDistributor;
+
+import java.util.function.Consumer;
 //#if MC >= 12005
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 //#else
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.fml.loading.FMLEnvironment;
 import dev.blendemotes.modern.net.Payloads;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlerEvent;
 //#endif
@@ -22,11 +24,23 @@ import net.neoforged.neoforge.network.event.RegisterPayloadHandlerEvent;
  */
 @Mod("blendemotes")
 public class BlendEmotesNeoForge {
+    /** Set by the client entry point; null on dedicated servers. */
+    static volatile Consumer<byte[]> clientReceiver;
+
     public BlendEmotesNeoForge(IEventBus modBus) {
         modBus.addListener(BlendEmotesNeoForge::onRegisterPayloads);
         ServerRelay.setSender(BlendEmotesNeoForge::send);
+        //#if MC < 12005
         if (FMLEnvironment.dist == Dist.CLIENT) {
             ClientNeoForge.init(modBus);
+        }
+        //#endif
+    }
+
+    private static void toClient(byte[] data) {
+        Consumer<byte[]> receiver = clientReceiver;
+        if (receiver != null) {
+            receiver.accept(data);
         }
     }
 
@@ -46,8 +60,8 @@ public class BlendEmotesNeoForge {
                     ServerPlayer player = (ServerPlayer) context.player();
                     context.enqueueWork(() -> ServerRelay.onPacket(player, payload.data()));
                 }
-            } else if (FMLEnvironment.dist == Dist.CLIENT) {
-                context.enqueueWork(() -> ClientNeoForge.onPacket(payload.data()));
+            } else {
+                context.enqueueWork(() -> toClient(payload.data()));
             }
         });
     }
@@ -60,8 +74,8 @@ public class BlendEmotesNeoForge {
                         context.workHandler().execute(() -> ServerRelay.onPacket((ServerPlayer) p, payload.data()));
                     }
                 });
-            } else if (FMLEnvironment.dist == Dist.CLIENT) {
-                context.workHandler().execute(() -> ClientNeoForge.onPacket(payload.data()));
+            } else {
+                context.workHandler().execute(() -> toClient(payload.data()));
             }
         });
     }

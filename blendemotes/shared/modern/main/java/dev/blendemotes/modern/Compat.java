@@ -6,10 +6,10 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec2;
-//#if MC >= 12002 && MC < 12109
+//#if MC >= 12109
+import net.minecraft.world.entity.player.PlayerModelType;
+//#elseif MC >= 12002
 import net.minecraft.client.resources.PlayerSkin;
-//#elseif MC >= 12109
-import net.minecraft.world.entity.player.PlayerSkin;
 //#endif
 //#if MC < 11900
 import net.minecraft.network.chat.TextComponent;
@@ -77,7 +77,9 @@ public final class Compat {
 
     /** True for players with the slim (3 px) arms skin model. */
     public static boolean slim(AbstractClientPlayer player) {
-        //#if MC >= 12002
+        //#if MC >= 12109
+        return player.getSkin().model() == PlayerModelType.SLIM;
+        //#elseif MC >= 12002
         return player.getSkin().model() == PlayerSkin.Model.SLIM;
         //#else
         return "slim".equals(player.getModelName());

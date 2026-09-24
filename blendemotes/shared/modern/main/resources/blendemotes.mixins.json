@@ -8,6 +8,7 @@
   ],
   "client": [
 //#if MC >= 12102
+    "HumanoidModelMixin",
     "PlayerRendererMixin",
     "PlayerRenderStateMixin",
     "WingsLayerMixin",

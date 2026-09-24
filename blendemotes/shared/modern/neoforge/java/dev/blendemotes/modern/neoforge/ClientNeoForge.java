@@ -7,16 +7,27 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 //#if MC >= 12005
 import net.minecraft.network.protocol.common.ServerboundCustomPayloadPacket;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.fml.common.Mod;
 //#else
 import net.neoforged.neoforge.network.PacketDistributor;
 //#endif
 
 /** Client only part of the NeoForge entry point. */
+//#if MC >= 12005
+@Mod(value = "blendemotes", dist = Dist.CLIENT)
+public class ClientNeoForge {
+    public ClientNeoForge(IEventBus modBus) {
+        init(modBus);
+    }
+//#else
 final class ClientNeoForge {
     private ClientNeoForge() {
     }
+//#endif
 
     static void init(IEventBus modBus) {
+        BlendEmotesNeoForge.clientReceiver = ModernEmotes::onPacket;
         modBus.addListener(ClientNeoForge::onKeys);
         ModernEmotes.setSender(payload -> {
             //#if MC >= 12005
@@ -33,9 +44,5 @@ final class ClientNeoForge {
         event.register(ModernEmotes.KEY_WHEEL);
         event.register(ModernEmotes.KEY_MENU);
         event.register(ModernEmotes.KEY_STOP);
-    }
-
-    static void onPacket(byte[] data) {
-        ModernEmotes.onPacket(data);
     }
 }

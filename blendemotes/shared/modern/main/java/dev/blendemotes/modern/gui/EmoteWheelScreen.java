@@ -27,14 +27,18 @@ public class EmoteWheelScreen extends BaseScreen {
 
     private boolean keyHeld() {
         InputConstants.Key k = ((KeyMappingAccessor) key).blendemotes$getKey();
+        //#if MC >= 12109
+        long window = minecraft.getWindow().handle();
+        //#else
         long window = minecraft.getWindow().getWindow();
+        //#endif
         if (k.getType() == InputConstants.Type.MOUSE) {
             return GLFW.glfwGetMouseButton(window, k.getValue()) == GLFW.GLFW_PRESS;
         }
         if (k.getValue() == InputConstants.UNKNOWN.getValue()) {
             return true;
         }
-        return InputConstants.isKeyDown(window, k.getValue());
+        return GLFW.glfwGetKey(window, k.getValue()) == GLFW.GLFW_PRESS;
     }
 
     @Override

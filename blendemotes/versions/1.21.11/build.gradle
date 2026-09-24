@@ -12,6 +12,13 @@ ext {
     fabricApiVersion = "0.141.6+1.21.11"
     forge = "61.2.1"
     neoforge = "net.neoforged:neoforge:21.11.45:universal"
+    // classes Mojang renamed or moved in 1.21.11 (whole words, see gradle/preprocess.gradle)
+    preprocessRenames = [
+            [12111, "ResourceLocation", "Identifier"],
+            [12111, "net.minecraft.client.model.PlayerModel", "net.minecraft.client.model.player.PlayerModel"],
+            [12111, "net.minecraft.client.renderer.RenderType", "net.minecraft.client.renderer.rendertype.RenderType"],
+            [12111, "net.minecraft.world.level.GameRules", "net.minecraft.world.level.gamerules.GameRules"]
+    ]
 }
 
 apply from: rootProject.file("gradle/modern.gradle")
