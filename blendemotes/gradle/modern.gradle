@@ -58,6 +58,18 @@ repositories {
     mavenCentral()
 }
 
+// Minecraft artifacts (group net.minecraft) are generated locally by Unimined or come from
+// Mojang's library server: never ask the other remote mavens for them (a flaky server would
+// otherwise fail the build).
+repositories.configureEach { repo ->
+    if (repo instanceof MavenArtifactRepository) {
+        def url = repo.url.toString()
+        if (url.startsWith("http") && !url.contains("libraries.minecraft.net")) {
+            repo.content { excludeGroupByRegex "net\\.minecraft(\\..*)?" }
+        }
+    }
+}
+
 boolean obfuscated = (project.mcVersion as int) <= 12111
 
 unimined.minecraft {

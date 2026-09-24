@@ -15,6 +15,9 @@
 // of the shared file.
 //
 // A version module sets `ext.mcVersion` and `ext.sharedRoot`, then applies this script.
+//
+// Renamed classes: `ext.preprocessRenames = [[12111, "ResourceLocation", "Identifier"]]` replaces
+// the whole word ResourceLocation with Identifier in the active code when MC >= 12111.
 
 def evalCondition(String expr, Map<String, Integer> vars) {
     def e = expr.trim()
@@ -51,6 +54,18 @@ def evalCondition(String expr, Map<String, Integer> vars) {
         return vars[e] != 0
     }
     throw new GradleException("preprocess: cannot evaluate '$expr'")
+}
+
+def applyRenames(String line, Map<String, Integer> vars) {
+    def renames = project.findProperty("preprocessRenames") ?: []
+    String out = line
+    renames.each { r ->
+        if (vars.MC >= (r[0] as int)) {
+            out = out.replaceAll("\\b" + java.util.regex.Pattern.quote(r[1].toString()) + "\\b",
+                    java.util.regex.Matcher.quoteReplacement(r[2].toString()))
+        }
+    }
+    return out
 }
 
 def preprocessText(String text, Map<String, Integer> vars, String fileName) {
@@ -90,7 +105,7 @@ def preprocessText(String text, Map<String, Integer> vars, String fileName) {
             active = top[0]
             out.append("\n")
         } else {
-            out.append(active ? line : "").append("\n")
+            out.append(active ? applyRenames(line, vars) : "").append("\n")
         }
     }
     if (!stack.isEmpty()) {
