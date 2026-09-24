@@ -44,11 +44,12 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
+          # the last one is the default JAVA_HOME that runs Gradle (8.14 cannot run on 25)
           java-version: |
             8
             17
-            21
             25
+            21
       - uses: gradle/actions/setup-gradle@v4
         with:
           cache-read-only: false
@@ -92,11 +93,12 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
+          # the last one is the default JAVA_HOME that runs Gradle (8.14 cannot run on 25)
           java-version: |
             8
             17
-            21
             25
+            21
       - uses: gradle/actions/setup-gradle@v4
         with:
           cache-read-only: false
@@ -140,11 +142,12 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
+          # the last one is the default JAVA_HOME that runs Gradle (8.14 cannot run on 25)
           java-version: |
             8
             17
-            21
             25
+            21
       - uses: gradle/actions/setup-gradle@v4
         with:
           cache-read-only: false

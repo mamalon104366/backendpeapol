@@ -30,6 +30,7 @@ public final class TestRunner {
                 "dev.blendemotes.core.emote.EmoteLibraryTest",
                 "dev.blendemotes.core.emote.EmotePlayerTest",
                 "dev.blendemotes.core.anim.io.LegacyLoaderTest",
+                "dev.blendemotes.core.client.WheelTest",
         };
         int passed = 0;
         List<String> failures = new ArrayList<String>();
