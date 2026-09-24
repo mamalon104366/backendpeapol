@@ -1,6 +1,6 @@
 plugins {
     id "java"
-    id "xyz.wagyourtail.unimined" version "${unimined_version}"
+    id "xyz.wagyourtail.unimined"
 }
 
 // Minecraft 1.8.9: everything else is in gradle/legacy.gradle and shared/legacy.

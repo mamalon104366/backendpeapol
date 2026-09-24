@@ -106,7 +106,7 @@ jobs:
         run: |
           grep -E "^${{ matrix.mc }}:" ci/probe.txt | cut -d: -f2- | sed "s/^ *//" | while IFS= read -r line; do
             echo "APIDUMP >>>>> $line"
-            eval "./gradlew -PmcVersions=${{ matrix.mc }} :mc-${{ matrix.mc }}:$line --console=plain -q" < /dev/null 2>&1 | grep -v -E "^\s*at |^Picked up" | cut -c1-700 || true
+            eval "./gradlew -PmcVersions=${{ matrix.mc }} :mc-${{ matrix.mc }}:$line --console=plain -q --stacktrace" < /dev/null 2>&1 | grep -v -E "^Picked up" | cut -c1-700 || true
           done
 
   selftest:

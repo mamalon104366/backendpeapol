@@ -1,6 +1,6 @@
 plugins {
     id "java"
-    id "xyz.wagyourtail.unimined" version "${unimined_version}"
+    id "xyz.wagyourtail.unimined"
 }
 
 // Minecraft 26.1.2: everything else is in gradle/modern.gradle and shared/modern.
