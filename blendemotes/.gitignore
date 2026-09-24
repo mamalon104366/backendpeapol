@@ -1,0 +1,9 @@
+build/
+build-local/
+.gradle/
+out/
+run/
+*.iml
+.idea/
+.vscode/
+*.class
