@@ -88,11 +88,19 @@ public class BlenderGroundTruthTest {
     }
 
     private static double[] compare(String action, String mode, boolean print) {
+        return compare(action, action, mode, print);
+    }
+
+    /**
+     * @param file emote file under /blender/ ("cartwheel" = the rig's own exporter,
+     *             "exact/cartwheel" = tools/blender/batch_export.py)
+     */
+    private static double[] compare(String action, String file, String mode, boolean print) {
         Map<String, Object> actions = JsonUtil.getObject(truth(), "actions");
         Map<String, Object> act = JsonUtil.getObject(actions, action);
         Map<String, Object> rest = JsonUtil.getObject(truth(), "rest");
         double fps = JsonUtil.getDouble(truth(), "fps", 24);
-        Animation anim = load(action);
+        Animation anim = load(file);
         VanillaPose vanilla = new VanillaPose().reset(RigDefinition.BLENDER);
 
         Map<String, Double> worst = new LinkedHashMap<String, Double>();
@@ -138,6 +146,15 @@ public class BlenderGroundTruthTest {
     public void testInchwormMatchesExportedCurves() {
         double[] e = compare("inchworm", "export", true);
         TestRunner.check(e[0] < 0.05, "inchworm deviates from Blender by " + e[0] + " px");
+    }
+
+    public void testBatchExporterNeedsNoRepair() {
+        // Files written by tools/blender/batch_export.py carry exact handles and are loaded
+        // without the heuristic repair.
+        double[] c = compare("cartwheel", "exact/cartwheel", "export", false);
+        double[] i = compare("inchworm", "exact/inchworm", "export", false);
+        TestRunner.check(c[0] < 0.05, "exact cartwheel deviates from Blender by " + c[0] + " px");
+        TestRunner.check(i[0] < 0.05, "exact inchworm deviates from Blender by " + i[0] + " px");
     }
 
     public void testFullRigReport() {

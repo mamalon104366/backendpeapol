@@ -4,7 +4,17 @@ BlendEmotes - exportador por lotes para el rig `emote_creator.blend` (rig 2.0).
 Exporta TODAS las acciones (animaciones) del .blend a archivos .json que el mod
 BlendEmotes carga directamente. Usa las mismas funciones de exportación que trae
 el rig dentro del .blend (`collect_animation_data.py` y `set_up_bedrock.py`), así
-que el resultado es idéntico a pulsar "Export" en el panel de la acción.
+que el resultado es el mismo que al pulsar "Export" en el panel de la acción, con tres
+correcciones del exportador del rig:
+
+  * los manejadores Bézier se multiplican por el signo del eje (el rig solo lo hace con
+    los valores, así que en algunos ejes la curva salía con la forma invertida);
+  * los manejadores del canal `bend` se escriben en grados (el rig los dejaba en radianes);
+  * los tiempos no se redondean a 3 decimales (con 24 fps los fotogramas caían entre
+    milisegundos).
+
+Además añade la marca `"blendemotes": {"rig": "emote_creator", "exactHandles": true,
+"fps": ...}` para que el mod no aplique sus correcciones automáticas a estos archivos.
 
 Uso (Blender 5.2+ recomendado, igual que el rig):
 
@@ -26,11 +36,15 @@ Luego copia los .json a `.minecraft/blendemotes/emotes/` (o usa /blendemotes rel
 
 import base64
 import json
+import math
 import os
 import sys
 import tempfile
 
 import bpy
+
+EXPORTER_VERSION = "1.0"
+TIME_DECIMALS = 6
 
 RIG_NAME = "export_armature"
 DEFAULT_EXPORT_BONES = [
@@ -129,10 +143,81 @@ def render_icon(scene, frame, engine_override=None):
     return None
 
 
+def frame_rate(scene):
+    return scene.render.fps / scene.render.fps_base
+
+
+def patch_exporter(bedrock):
+    """Corrige, sobre el módulo `set_up_bedrock.py` del rig, los fallos del exportador."""
+    signs = {}  # puntero del keyframe -> signo del eje con el que se escribe su valor
+
+    original_write_mode = bedrock.write_mode
+
+    def write_mode(bone_name, mode, animation_data, rig_object, default_bones, export_bones):
+        signs.clear()
+        if mode == 'bend':
+            key = f"{bone_name}_bend"
+            fcurves = animation_data[key]["rotation"] if key in default_bones and key in animation_data else None
+        else:
+            fcurves = animation_data.get(bone_name, {}).get(mode)
+        if fcurves and any(fc is not None and len(fc.keyframe_points) for fc in fcurves):
+            difference = bedrock.get_bone_axis_difference(rig_object, bone_name, mode)
+            for index, fcurve in enumerate(fcurves):
+                if fcurve is None or index > 2:
+                    continue
+                sign = difference[index][1]
+                for point in fcurve.keyframe_points:
+                    signs[point.as_pointer()] = sign
+        return original_write_mode(bone_name, mode, animation_data, rig_object, default_bones, export_bones)
+
+    def get_bezier_args(keyframe, mode, multiplier):
+        fps = frame_rate(bpy.context.scene)
+        sign = signs.get(keyframe.as_pointer(), multiplier)
+        left_y = (keyframe.handle_left.y - keyframe.co.y) * sign
+        left_x = (keyframe.handle_left.x - keyframe.co.x) / fps
+        right_y = (keyframe.handle_right.y - keyframe.co.y) * sign
+        right_x = (keyframe.handle_right.x - keyframe.co.x) / fps
+        if mode == "position":
+            left_y *= 4
+            right_y *= 4
+        if mode in ("rotation", "bend"):
+            left_y = math.degrees(left_y)
+            right_y = math.degrees(right_y)
+        return [round(x, 6) for x in (left_y, left_x, right_y, right_x)]
+
+    def fcurves_to_mode_dict(fcurves, is_bend=False):
+        fps = frame_rate(bpy.context.scene)
+        maps = []
+        for fcurve in fcurves:
+            maps.append({} if fcurve is None else {round(k.co.x, 6): k for k in fcurve.keyframe_points})
+        frames = set()
+        for m in maps:
+            frames |= set(m.keys())
+        result = {}
+        for frame in sorted(frames):
+            time = round(frame / fps, TIME_DECIMALS)
+            if is_bend:
+                vector = [maps[0].get(frame, "pal.disabled"), "pal.disabled", "pal.disabled"]
+            else:
+                vector = [m.get(frame, "pal.disabled") for m in maps[:3]]
+            result[time] = {"vector": vector}
+        return result
+
+    bedrock.write_mode = write_mode
+    bedrock.get_bezier_args = get_bezier_args
+    bedrock.fcurves_to_mode_dict = fcurves_to_mode_dict
+
+
+def load_exporter():
+    collect = bpy.data.texts['collect_animation_data.py'].as_module()
+    bedrock = bpy.data.texts['set_up_bedrock.py'].as_module()
+    patch_exporter(bedrock)
+    return collect.collect_animation_data, bedrock.create_emote
+
+
 def export_action(rig, action, out_dir, with_icon, default_author, icon_engine=None):
     scene = bpy.context.scene
-    collect_animation_data = bpy.data.texts['collect_animation_data.py'].as_module().collect_animation_data
-    create_emote = bpy.data.texts['set_up_bedrock.py'].as_module().create_emote
+    collect_animation_data, create_emote = load_exporter()
 
     assign_action(rig, action)
     bpy.context.view_layer.objects.active = rig
@@ -149,6 +234,17 @@ def export_action(rig, action, out_dir, with_icon, default_author, icon_engine=N
     bpy.data.actions.remove(work_action)
 
     anim = emote["animations"][action.name]
+    fps = frame_rate(scene)
+    if "loopTick" in anim:
+        # el rig lo redondea a 3 decimales
+        start = int(action.frame_start) if action.use_frame_range else 0
+        anim["loopTick"] = round((scene.frame_start - start) / fps, TIME_DECIMALS)
+    anim["blendemotes"] = {
+        "rig": "emote_creator",
+        "exactHandles": True,
+        "fps": round(fps, 6),
+        "exporter": EXPORTER_VERSION,
+    }
     meta = anim["player_animation_library"]
     # Valores por defecto del panel -> algo útil.
     if not meta.get("name") or meta.get("name") == "Name":
