@@ -62,6 +62,10 @@ final class SelfTest {
             mc.stop();
             return;
         }
+        if (state >= 1 && state <= 3 && mc.level != null && mc.screen != null) {
+            // the virtual display has no focus: the game keeps opening the pause menu
+            mc.setScreen(null);
+        }
         switch (state) {
             case 0:
                 if (timer > 100 && mc.level == null) {

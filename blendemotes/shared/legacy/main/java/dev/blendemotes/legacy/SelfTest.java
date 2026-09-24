@@ -48,6 +48,11 @@ final class SelfTest {
             mc.shutdown();
             return;
         }
+        if (state >= 1 && state <= 3 && Compat.world() != null && mc.currentScreen != null) {
+            // the virtual display has no focus: the game keeps opening the pause menu
+            mc.gameSettings.pauseOnLostFocus = false;
+            mc.displayGuiScreen(null);
+        }
         switch (state) {
             case 0:
                 if (mc.currentScreen instanceof GuiMainMenu && timer > 40) {
