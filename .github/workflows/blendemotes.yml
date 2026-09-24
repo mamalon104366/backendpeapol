@@ -1,0 +1,19 @@
+name: BlendEmotes
+
+on:
+  push:
+    branches: [ "claude/**" ]
+    paths: [ "blendemotes/**", ".github/workflows/blendemotes.yml" ]
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check build hosts
+        run: |
+          for u in https://maven.fabricmc.net/ https://maven.minecraftforge.net/ https://maven.neoforged.net/releases/ https://maven.legacyfabric.net/ https://libraries.minecraft.net/ https://piston-meta.mojang.com/mc/game/version_manifest_v2.json https://maven.wagyourtail.xyz/releases/ https://repo.essential.gg/repository/maven-public/ https://maven.architectury.dev/ https://repo.spongepowered.org/maven/ https://maven.kikugie.dev/releases/; do
+            echo "$u -> $(curl -s -o /dev/null -w '%{http_code}' --max-time 20 $u)"
+          done
+          java -version
+          ls /usr/lib/jvm || true
