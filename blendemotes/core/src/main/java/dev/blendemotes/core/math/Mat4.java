@@ -182,6 +182,28 @@ public final class Mat4 {
         return new Vec3(getColumn(0).length(), getColumn(1).length(), getColumn(2).length());
     }
 
+    /**
+     * Splits an affine transform into translation, rotation and scale, so renderers can apply it
+     * with translate / rotate / scale calls: {tx, ty, tz, qx, qy, qz, qw, sx, sy, sz}. A mirrored
+     * matrix gets a negative X scale. Shear is not representable and is dropped.
+     */
+    public double[] decompose() {
+        Vec3 s = getScale();
+        double sx = s.x;
+        double det = m[0] * (m[5] * m[10] - m[6] * m[9])
+                - m[1] * (m[4] * m[10] - m[6] * m[8])
+                + m[2] * (m[4] * m[9] - m[5] * m[8]);
+        Mat4 rot = new Mat4(this);
+        if (det < 0) {
+            sx = -sx;
+            rot.m[0] = -rot.m[0];
+            rot.m[4] = -rot.m[4];
+            rot.m[8] = -rot.m[8];
+        }
+        Quat q = Quat.fromMatrix(rot);
+        return new double[]{m[3], m[7], m[11], q.x, q.y, q.z, q.w, sx, s.y, s.z};
+    }
+
     /** General inverse of the affine part (last row assumed 0,0,0,1). */
     public Mat4 invertAffine() {
         double a = m[0], b = m[1], c = m[2];

@@ -127,6 +127,7 @@ find: net\.minecraftforge\.(network|client\.event|event|fml\.javafmlmod|eventbus
 net.minecraftforge.network.NetworkRegistry | newEventChannel|ChannelBuilder|acceptMissingOr
 net.minecraftforge.network.ChannelBuilder
 net.minecraftforge.network.EventNetworkChannel
+net.minecraftforge.network.Channel | send|isRemotePresent
 net.minecraftforge.network.NetworkEvent
 net.minecraftforge.network.CustomPayloadEvent
 net.minecraftforge.event.network.CustomPayloadEvent

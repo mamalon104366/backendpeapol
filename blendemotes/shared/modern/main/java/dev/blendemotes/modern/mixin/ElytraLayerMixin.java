@@ -1,3 +1,4 @@
+//#if MC < 12102
 package dev.blendemotes.modern.mixin;
 
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -14,7 +15,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/** Elytra wings follow the emoting torso. */
+/** Elytra wings follow the emoting torso (Minecraft up to 1.21.1). */
 @Mixin(ElytraLayer.class)
 public abstract class ElytraLayerMixin {
     @Unique
@@ -23,7 +24,7 @@ public abstract class ElytraLayerMixin {
     @Inject(method = "render(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/entity/LivingEntity;FFFFFF)V", at = @At("HEAD"))
     private void blendemotes$begin(PoseStack poseStack, MultiBufferSource buffers, int light, LivingEntity entity,
                                    float a, float b, float c, float d, float e, float f, CallbackInfo ci) {
-        PlayerPose pose = entity == RenderContext.entity ? RenderContext.pose : null;
+        PlayerPose pose = RenderContext.isTarget(entity) ? RenderContext.pose : null;
         blendemotes$pushed = pose != null;
         if (pose != null) {
             poseStack.pushPose();
@@ -40,3 +41,4 @@ public abstract class ElytraLayerMixin {
         }
     }
 }
+//#endif

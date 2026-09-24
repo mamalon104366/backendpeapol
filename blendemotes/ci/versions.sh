@@ -18,3 +18,8 @@ for mc in 1.8.9 1.12.2 1.16.5 1.18.2 1.19.2 1.19.4 1.20.1 1.20.4 1.20.6 1.21.1 1
   case "$mc" in 1.*) n=$(echo "$neo" | grep "^$short\." | sort -V | tail -2 | tr '\n' ' ');; *) n=$(echo "$neo" | grep "^$mc\." | sort -V | tail -2 | tr '\n' ' ');; esac
   echo "VERSIONS $mc | forge: $f | neoforge: $n | fabric-api: $a"
 done
+# Fabric API module names (some were renamed for the Mojang names of 26.x)
+for v in 0.141.6+1.21.11 0.155.3+26.1.2 0.161.0+26.3; do
+  mods=$(curl -s --max-time 30 "https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/$v/fabric-api-$v.pom" | grep -o '<artifactId>[^<]*</artifactId>' | sed 's|</*artifactId>||g' | grep -E 'key|network|lifecycle|base' | tr '\n' ' ')
+  echo "VERSIONS fabric-api $v modules: $mods"
+done

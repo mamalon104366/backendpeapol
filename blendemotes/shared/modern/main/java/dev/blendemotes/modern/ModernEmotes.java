@@ -14,20 +14,30 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
 import org.lwjgl.glfw.GLFW;
+//#if MC >= 11800
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+//#else
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+//#endif
 
 import java.io.File;
 import java.util.List;
 import java.util.UUID;
 
 /**
- * Client side of BlendEmotes for Minecraft 1.20.1, shared by Fabric and Forge. Loader code
- * registers the key mappings, forwards client ticks and plugin channel packets here.
+ * Client side of BlendEmotes for Minecraft 1.16.5 and newer, shared by Fabric, Forge and
+ * NeoForge. Loader code registers the key mappings, forwards client ticks and plugin channel
+ * packets here.
  */
 public final class ModernEmotes {
     public static final String MOD_ID = "blendemotes";
+    //#if MC >= 11800
     public static final Logger LOGGER = LoggerFactory.getLogger("BlendEmotes");
+    //#else
+    public static final Logger LOGGER = LogManager.getLogger("BlendEmotes");
+    //#endif
 
     public interface Sender {
         void send(byte[] payload);
@@ -39,6 +49,7 @@ public final class ModernEmotes {
 
     private static ClientEmotes client;
     private static Sender sender;
+    private static boolean sendFailureLogged;
     private static long ticks;
     private static ClientLevel lastLevel;
     private static final LocalInput INPUT = new LocalInput();
@@ -54,19 +65,31 @@ public final class ModernEmotes {
         return client == null || client.config().bends;
     }
 
-    public static void initClient(Sender packetSender) {
+    /** Loader code: how packets reach the server (called once at startup). */
+    public static void setSender(Sender packetSender) {
         sender = packetSender;
+    }
+
+    private static void initClient() {
         client = new ClientEmotes(new ClientPlatform() {
             @Override
             public void sendPacket(byte[] payload) {
                 if (sender != null && Minecraft.getInstance().getConnection() != null) {
-                    sender.send(payload);
+                    try {
+                        sender.send(payload);
+                    } catch (RuntimeException e) {
+                        // a server without the mod: some loaders refuse channels the server did not announce
+                        if (!sendFailureLogged) {
+                            sendFailureLogged = true;
+                            LOGGER.info("Emote packets are not sent to this server: " + e);
+                        }
+                    }
                 }
             }
 
             @Override
             public double clock() {
-                return (ticks + Minecraft.getInstance().getFrameTime()) / 20.0;
+                return (ticks + Compat.partialTick(Minecraft.getInstance())) / 20.0;
             }
 
             @Override
@@ -104,10 +127,10 @@ public final class ModernEmotes {
         client.init();
     }
 
-    /** End of every client tick. */
+    /** End of every client tick (see MinecraftMixin). */
     public static void tick(Minecraft mc) {
         if (client == null) {
-            return;
+            initClient();
         }
         ticks++;
         ClientLevel level = mc.level;
@@ -121,8 +144,8 @@ public final class ModernEmotes {
         LocalPlayer player = mc.player;
         INPUT.clear();
         if (player != null) {
-            INPUT.moving = player.input != null && (Math.abs(player.input.forwardImpulse) > 1e-3 || Math.abs(player.input.leftImpulse) > 1e-3);
-            INPUT.jumping = player.input != null && player.input.jumping;
+            INPUT.moving = Compat.moving(player);
+            INPUT.jumping = Compat.jumping(player);
             INPUT.sneaking = player.isShiftKeyDown();
             INPUT.attacking = mc.options.keyAttack.isDown();
             INPUT.usingItem = mc.options.keyUse.isDown();

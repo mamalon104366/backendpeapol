@@ -20,9 +20,10 @@
 
 ext.sharedRoot = rootProject.file("shared/modern")
 
-// Fabric API modules the mod depends on (also listed in fabric.mod.json).
-ext.FABRIC_API_MODULES = ["fabric-api-base", "fabric-networking-api-v1", "fabric-lifecycle-events-v1",
-                          "fabric-key-binding-api-v1"]
+// Fabric API modules the mod uses (see fabric.mod.json), plus lifecycle events that the
+// networking module needs at runtime in some versions.
+ext.FABRIC_API_MODULES = ["fabric-api-base", "fabric-networking-api-v1", "fabric-key-binding-api-v1",
+                          "fabric-lifecycle-events-v1"]
 
 def loaders = []
 if (project.findProperty("fabricLoader")) loaders << "fabric"
@@ -141,8 +142,13 @@ dependencies {
     loaders.each { l -> add("${l}Implementation", project(":core")) }
     if (loaders.contains("fabric")) {
         // only the Fabric API modules the mod uses (players with the full Fabric API have them)
-        FABRIC_API_MODULES.each {
-            fabricModImplementation unimined.fabricApi.module(it, project.fabricApiVersion.toString())
+        (project.findProperty("fabricApiModules") ?: FABRIC_API_MODULES).each {
+            try {
+                fabricModImplementation unimined.fabricApi.fabricModule(it, project.fabricApiVersion.toString())
+            } catch (Exception e) {
+                // keeps the project usable (e.g. for apiDump); compiling the Fabric code will fail
+                logger.error("Fabric API ${project.fabricApiVersion} has no module $it: $e")
+            }
         }
     }
 }
@@ -179,7 +185,8 @@ def resourceProps = [
         javaMixin  : javaLevel >= 21 ? "JAVA_21" : (javaLevel >= 17 ? "JAVA_17" : "JAVA_8"),
         forgeMajor : (project.findProperty("forge") ?: "0").toString().tokenize(".")[0],
         neoRange   : (project.findProperty("neoRange") ?: "[1,)").toString(),
-        packFormat : (project.findProperty("packFormat") ?: "15").toString(),
+        // resource pack format of the mod's pack.mcmeta (only Forge up to 1.20.1 ships the file)
+        packFormat : (project.findProperty("packFormat") ?: (mc <= 11605 ? "6" : mc <= 11802 ? "8" : mc <= 11902 ? "9" : "15")).toString(),
 ]
 (["main"] + loaders).each { l ->
     tasks.named(sourceSets.getByName(l).processResourcesTaskName) {

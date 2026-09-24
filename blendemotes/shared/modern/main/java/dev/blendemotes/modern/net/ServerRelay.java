@@ -3,8 +3,13 @@ package dev.blendemotes.modern.net;
 import dev.blendemotes.core.net.EmoteServer;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+//#if MC >= 11800
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+//#else
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+//#endif
 
 import java.util.ArrayList;
 import java.util.List;
@@ -12,7 +17,11 @@ import java.util.UUID;
 
 /** Server side emote relay (dedicated servers and the singleplayer/LAN server). */
 public final class ServerRelay {
+    //#if MC >= 11800
     private static final Logger LOGGER = LoggerFactory.getLogger("BlendEmotes");
+    //#else
+    private static final Logger LOGGER = LogManager.getLogger("BlendEmotes");
+    //#endif
 
     public interface Sender {
         void send(ServerPlayer player, byte[] payload);
@@ -37,7 +46,12 @@ public final class ServerRelay {
                 public void send(UUID player, byte[] packet) {
                     ServerPlayer p = mc.getPlayerList().getPlayer(player);
                     if (p != null && sender != null) {
-                        sender.send(p, packet);
+                        try {
+                            sender.send(p, packet);
+                        } catch (RuntimeException e) {
+                            // a client without the mod: some loaders refuse channels it did not announce
+                            LOGGER.debug("Emote packet not sent to " + player + ": " + e);
+                        }
                     }
                 }
 
@@ -66,12 +80,23 @@ public final class ServerRelay {
         return server;
     }
 
+    private static MinecraftServer serverOf(ServerPlayer player) {
+        //#if MC >= 12105
+        return player.level().getServer();
+        //#else
+        return player.server;
+        //#endif
+    }
+
     public static void onPacket(ServerPlayer player, byte[] payload) {
-        get(player.server).onPacket(player.getUUID(), payload);
+        MinecraftServer mc = serverOf(player);
+        if (mc != null) {
+            get(mc).onPacket(player.getUUID(), payload);
+        }
     }
 
     public static void onLogout(ServerPlayer player) {
-        if (server != null && owner == player.server) {
+        if (server != null && owner == serverOf(player)) {
             server.onLeave(player.getUUID());
         }
     }

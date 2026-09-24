@@ -122,7 +122,7 @@ final class SelfTest {
     }
 
     private static void shot(Minecraft mc, String name) {
-        ScreenShotHelper.saveScreenshot(mc.mcDataDir, "blendemotes_" + name + ".png", mc.displayWidth, mc.displayHeight, mc.getFramebuffer());
+        ScreenShotHelper.saveScreenshot(Compat.gameDir(), "blendemotes_" + name + ".png", mc.displayWidth, mc.displayHeight, mc.getFramebuffer());
         ClientEmotes client = LegacyEmotes.client();
         PlayerPose pose = client.pose(Compat.player().getUniqueID(), new VanillaPose(), false, 0, new PlayerPose());
         if (pose != null) {

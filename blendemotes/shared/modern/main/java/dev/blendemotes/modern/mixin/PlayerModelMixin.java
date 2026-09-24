@@ -12,9 +12,7 @@ import dev.blendemotes.modern.render.PoseApplier;
 import dev.blendemotes.modern.render.PoseMath;
 import dev.blendemotes.modern.render.RenderContext;
 import net.minecraft.client.model.PlayerModel;
-import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.world.entity.HumanoidArm;
-import net.minecraft.world.entity.LivingEntity;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -22,7 +20,14 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+//#if MC >= 12102
+import net.minecraft.client.renderer.entity.state.PlayerRenderState;
+//#else
+import net.minecraft.world.entity.LivingEntity;
+//#endif
 
+/** Runs the emote after vanilla animated the player model and moves held items with the rig. */
+@SuppressWarnings("rawtypes")
 @Mixin(PlayerModel.class)
 public abstract class PlayerModelMixin {
     @Shadow
@@ -35,36 +40,54 @@ public abstract class PlayerModelMixin {
     private final PlayerPose blendemotes$pose = new PlayerPose();
 
     @Inject(method = "<init>", at = @At("TAIL"))
-    private void blendemotes$init(ModelPart root, boolean slim, CallbackInfo ci) {
-        PartMeshes.player((PlayerModel<?>) (Object) this, slim);
+    private void blendemotes$init(CallbackInfo ci) {
+        PartMeshes.player((PlayerModel) (Object) this, slim);
     }
 
-    @Inject(method = "setupAnim(Lnet/minecraft/world/entity/LivingEntity;FFFFF)V", at = @At("HEAD"))
-    private void blendemotes$reset(LivingEntity entity, float limbSwing, float limbSwingAmount, float ageInTicks,
-                                   float netHeadYaw, float headPitch, CallbackInfo ci) {
-        PoseApplier.resetDirty((PlayerModel<?>) (Object) this);
-    }
-
-    @Inject(method = "setupAnim(Lnet/minecraft/world/entity/LivingEntity;FFFFF)V", at = @At("TAIL"))
-    private void blendemotes$emote(LivingEntity entity, float limbSwing, float limbSwingAmount, float ageInTicks,
-                                   float netHeadYaw, float headPitch, CallbackInfo ci) {
-        if (entity != RenderContext.entity || ModernEmotes.client() == null) {
+    @Unique
+    private void blendemotes$animate(Object target, float ageInTicks) {
+        PlayerModel model = (PlayerModel) (Object) this;
+        if (!RenderContext.isTarget(target) || ModernEmotes.client() == null) {
             return;
         }
-        PlayerModel<?> model = (PlayerModel<?>) (Object) this;
         PoseApplier.capture(model, blendemotes$vanilla);
-        PlayerPose pose = ModernEmotes.client().pose(entity.getUUID(), blendemotes$vanilla, slim, ageInTicks / 20.0, blendemotes$pose);
+        PlayerPose pose = ModernEmotes.client().pose(RenderContext.player, blendemotes$vanilla, slim, ageInTicks / 20.0,
+                blendemotes$pose);
         RenderContext.pose = pose;
         if (pose != null) {
             PoseApplier.apply(model, pose);
         }
     }
 
+    //#if MC >= 12102
+    @Inject(method = "setupAnim(Lnet/minecraft/client/renderer/entity/state/PlayerRenderState;)V", at = @At("HEAD"))
+    private void blendemotes$reset(PlayerRenderState state, CallbackInfo ci) {
+        PoseApplier.resetDirty((PlayerModel) (Object) this, slim);
+    }
+
+    @Inject(method = "setupAnim(Lnet/minecraft/client/renderer/entity/state/PlayerRenderState;)V", at = @At("TAIL"))
+    private void blendemotes$emote(PlayerRenderState state, CallbackInfo ci) {
+        blendemotes$animate(state, state.ageInTicks);
+    }
+    //#else
+    @Inject(method = "setupAnim(Lnet/minecraft/world/entity/LivingEntity;FFFFF)V", at = @At("HEAD"))
+    private void blendemotes$reset(LivingEntity entity, float limbSwing, float limbSwingAmount, float ageInTicks,
+                                   float netHeadYaw, float headPitch, CallbackInfo ci) {
+        PoseApplier.resetDirty((PlayerModel) (Object) this, slim);
+    }
+
+    @Inject(method = "setupAnim(Lnet/minecraft/world/entity/LivingEntity;FFFFF)V", at = @At("TAIL"))
+    private void blendemotes$emote(LivingEntity entity, float limbSwing, float limbSwingAmount, float ageInTicks,
+                                   float netHeadYaw, float headPitch, CallbackInfo ci) {
+        blendemotes$animate(entity, ageInTicks);
+    }
+    //#endif
+
     /** Held items follow the bent forearm and the rig's item bones. */
     @Inject(method = "translateToHand", at = @At("HEAD"), cancellable = true)
     private void blendemotes$hand(HumanoidArm arm, PoseStack poseStack, CallbackInfo ci) {
         PlayerPose pose = RenderContext.pose;
-        if (pose == null || RenderContext.entity == null) {
+        if (pose == null || RenderContext.target == null) {
             return;
         }
         boolean right = arm == HumanoidArm.RIGHT;

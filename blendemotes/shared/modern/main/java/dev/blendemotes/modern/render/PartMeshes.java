@@ -10,6 +10,7 @@ import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.model.geom.ModelPart;
 
 /** Attaches bendable geometry to the parts of player and armour models. */
+@SuppressWarnings("rawtypes")
 public final class PartMeshes {
     private PartMeshes() {
     }
@@ -18,7 +19,7 @@ public final class PartMeshes {
         ((BendablePart) (Object) part).blendemotes$setMesh(mesh);
     }
 
-    public static void player(PlayerModel<?> model, boolean slim) {
+    public static void player(PlayerModel model, boolean slim) {
         set(model.body, PlayerModelGeometry.mesh(PlayerPart.TORSO, PlayerModelGeometry.Layer.INNER, slim));
         set(model.jacket, PlayerModelGeometry.mesh(PlayerPart.TORSO, PlayerModelGeometry.Layer.OUTER, slim));
         set(model.rightArm, PlayerModelGeometry.mesh(PlayerPart.RIGHT_ARM, PlayerModelGeometry.Layer.INNER, slim));

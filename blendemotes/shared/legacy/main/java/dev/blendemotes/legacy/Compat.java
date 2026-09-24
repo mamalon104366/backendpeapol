@@ -62,6 +62,15 @@ public final class Compat {
         //#endif
     }
 
+    /** The game's working directory (.minecraft). */
+    public static java.io.File gameDir() {
+        //#if MC >= 11202
+        return Minecraft.getMinecraft().gameDir;
+        //#else
+        return Minecraft.getMinecraft().mcDataDir;
+        //#endif
+    }
+
     /** Server of a player (1.12 removed the static server getter). */
     public static MinecraftServer server(EntityPlayerMP player) {
         //#if MC >= 11202

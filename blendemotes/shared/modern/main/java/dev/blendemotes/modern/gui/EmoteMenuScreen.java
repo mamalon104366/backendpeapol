@@ -3,9 +3,9 @@ package dev.blendemotes.modern.gui;
 import dev.blendemotes.core.client.ClientEmotes;
 import dev.blendemotes.core.config.EmoteConfig;
 import dev.blendemotes.core.emote.Emote;
+import dev.blendemotes.modern.Compat;
 import dev.blendemotes.modern.ModernEmotes;
 import net.minecraft.Util;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -19,7 +19,7 @@ import java.util.List;
  * Emote list: click an emote to select it, then click a wheel slot to put it there
  * (right click a slot to empty it). Double click an emote to play it.
  */
-public class EmoteMenuScreen extends Screen {
+public class EmoteMenuScreen extends BaseScreen {
     private final Screen parent;
     private int page;
     private Emote selected;
@@ -28,7 +28,7 @@ public class EmoteMenuScreen extends Screen {
     private final List<Button> slotButtons = new ArrayList<>();
 
     public EmoteMenuScreen(Screen parent) {
-        super(Component.translatable("blendemotes.menu.title"));
+        super(Compat.translatable("blendemotes.menu.title"));
         this.parent = parent;
     }
 
@@ -38,9 +38,9 @@ public class EmoteMenuScreen extends Screen {
 
     @Override
     protected void init() {
-        clearWidgets();
+        clearAll();
         slotButtons.clear();
-        ClientEmotes client = client();
+        final ClientEmotes client = client();
         if (client == null) {
             return;
         }
@@ -51,14 +51,12 @@ public class EmoteMenuScreen extends Screen {
             int y = 24 + (i / 4) * 22;
             Emote e = client.wheelEmote(i);
             String label = font.plainSubstrByWidth((i + 1) + ": " + (e == null ? "-" : e.info.name), slotW - 6);
-            Button b = Button.builder(Component.literal(label), btn -> {
+            slotButtons.add(button(x, y, slotW, 20, Compat.literal(label), () -> {
                 if (selected != null) {
                     client.setWheelEmote(slot, selected);
                     init();
                 }
-            }).bounds(x, y, slotW, 20).build();
-            slotButtons.add(b);
-            addRenderableWidget(b);
+            }));
         }
         List<Emote> emotes = client.emotes();
         int top = 24 + 2 * 22 + 16;
@@ -79,7 +77,7 @@ public class EmoteMenuScreen extends Screen {
             int x = startX + (i % columns) * (entryW + 4);
             int y = top + (i / columns) * 22;
             String label = font.plainSubstrByWidth((e == selected ? "> " : "") + e.info.name, entryW - 6);
-            addRenderableWidget(Button.builder(Component.literal(label), btn -> {
+            button(x, y, entryW, 20, Compat.literal(label), () -> {
                 long now = System.currentTimeMillis();
                 if (e == lastClicked && now - lastClick < 400) {
                     play(e);
@@ -89,39 +87,37 @@ public class EmoteMenuScreen extends Screen {
                 lastClicked = e;
                 selected = e;
                 init();
-            }).bounds(x, y, entryW, 20).build());
+            });
         }
         int by = height - 28;
-        addRenderableWidget(Button.builder(Component.literal("<"), b -> {
+        button(width / 2 - 206, by, 40, 20, Compat.literal("<"), () -> {
             page--;
             init();
-        }).bounds(width / 2 - 206, by, 40, 20).build());
-        addRenderableWidget(Button.builder(Component.translatable("blendemotes.menu.reload"), b -> {
+        });
+        button(width / 2 - 162, by, 80, 20, Compat.translatable("blendemotes.menu.reload"), () -> {
             client.reload();
             selected = null;
             init();
-        }).bounds(width / 2 - 162, by, 80, 20).build());
-        addRenderableWidget(Button.builder(Component.translatable("blendemotes.menu.folder"), b -> {
+        });
+        button(width / 2 - 78, by, 80, 20, Compat.translatable("blendemotes.menu.folder"), () -> {
             File folder = client.emotesFolder();
             if (!folder.isDirectory()) {
                 //noinspection ResultOfMethodCallIgnored
                 folder.mkdirs();
             }
             Util.getPlatform().openFile(folder);
-        }).bounds(width / 2 - 78, by, 80, 20).build());
-        Button play = Button.builder(Component.translatable("blendemotes.menu.play"), b -> {
+        });
+        Button play = button(width / 2 + 6, by, 80, 20, Compat.translatable("blendemotes.menu.play"), () -> {
             if (selected != null) {
                 play(selected);
             }
-        }).bounds(width / 2 + 6, by, 80, 20).build();
+        });
         play.active = selected != null;
-        addRenderableWidget(play);
-        addRenderableWidget(Button.builder(Component.translatable("gui.done"), b -> onClose())
-                .bounds(width / 2 + 90, by, 72, 20).build());
-        addRenderableWidget(Button.builder(Component.literal(">"), b -> {
+        button(width / 2 + 90, by, 72, 20, Compat.translatable("gui.done"), this::onClose);
+        button(width / 2 + 166, by, 40, 20, Compat.literal(">"), () -> {
             page++;
             init();
-        }).bounds(width / 2 + 166, by, 40, 20).build());
+        });
     }
 
     private void play(Emote e) {
@@ -130,7 +126,7 @@ public class EmoteMenuScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    protected boolean click(double mouseX, double mouseY, int button) {
         if (button == 1) {
             for (int i = 0; i < slotButtons.size(); i++) {
                 if (slotButtons.get(i).isMouseOver(mouseX, mouseY)) {
@@ -140,12 +136,12 @@ public class EmoteMenuScreen extends Screen {
                 }
             }
         }
-        return super.mouseClicked(mouseX, mouseY, button);
+        return false;
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
-        page += delta > 0 ? -1 : 1;
+    protected boolean scroll(double amount) {
+        page += amount > 0 ? -1 : 1;
         init();
         return true;
     }
@@ -156,31 +152,24 @@ public class EmoteMenuScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        renderBackground(g);
-        g.drawCenteredString(font, title, width / 2, 8, 0xFFFFFF);
-        super.render(g, mouseX, mouseY, partialTick);
+    protected void draw(Ui ui, int mouseX, int mouseY, float partialTick) {
+        ui.centered(font, title, width / 2, 8, 0xFFFFFFFF);
         ClientEmotes client = client();
         if (client == null) {
             return;
         }
-        Component hint = selected == null ? Component.translatable("blendemotes.menu.hint")
-                : Component.translatable("blendemotes.menu.selected", selected.info.name);
-        g.drawCenteredString(font, hint, width / 2, 24 + 2 * 22 + 4, 0xAAAAAA);
+        Component hint = selected == null ? Compat.translatable("blendemotes.menu.hint")
+                : Compat.translatable("blendemotes.menu.selected", selected.info.name);
+        ui.centered(font, hint, width / 2, 24 + 2 * 22 + 4, 0xFFAAAAAA);
         int errors = client.library.errors().size();
         if (errors > 0) {
-            g.drawCenteredString(font, Component.translatable("blendemotes.menu.errors", errors), width / 2, height - 42, 0xFF6060);
+            ui.centered(font, Compat.translatable("blendemotes.menu.errors", errors), width / 2, height - 42, 0xFFFF6060);
         }
         if (selected != null) {
             ResourceLocation icon = Icons.get(selected);
             if (icon != null) {
-                g.blit(icon, 6, 6, 0, 0, 48, 48, 48, 48);
+                ui.image(icon, 6, 6, 48, 48);
             }
         }
-    }
-
-    @Override
-    public boolean isPauseScreen() {
-        return false;
     }
 }

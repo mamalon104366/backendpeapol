@@ -3,12 +3,22 @@
   "minVersion": "0.8",
   "package": "dev.blendemotes.modern.mixin",
   "compatibilityLevel": "${javaMixin}",
+  "mixins": [
+    "PlayerListMixin"
+  ],
   "client": [
-    "CapeLayerMixin",
+//#if MC >= 12102
+    "PlayerRendererMixin",
+    "PlayerRenderStateMixin",
+    "WingsLayerMixin",
+//#else
     "ElytraLayerMixin",
+//#endif
+    "CapeLayerMixin",
     "HumanoidArmorLayerMixin",
     "KeyMappingAccessor",
     "LivingEntityRendererMixin",
+    "MinecraftMixin",
     "ModelPartMixin",
     "PlayerModelMixin"
   ],

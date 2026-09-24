@@ -1,0 +1,12 @@
+# Minecraft versions built by CI, and the loaders tested in game (self-test).
+# <minecraft> <loaders...>
+1.8.9    forge fabric
+1.12.2   forge fabric
+1.16.5   forge fabric
+1.18.2   forge fabric
+1.19.2   forge fabric
+1.20.1   forge fabric
+1.20.4   forge fabric neoforge
+1.21.1   forge fabric neoforge
+1.21.4   forge fabric neoforge
+1.21.8   forge fabric neoforge

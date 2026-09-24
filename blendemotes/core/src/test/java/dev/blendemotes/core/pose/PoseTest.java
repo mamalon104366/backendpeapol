@@ -113,4 +113,23 @@ public class PoseTest {
             TestRunner.check(Mat4.rotationZYX(e[0], e[1], e[2]).approxEquals(m, 1e-6), "euler round trip " + Arrays.toString(c));
         }
     }
+
+    public void testDecomposeRoundTrip() {
+        dev.blendemotes.core.math.Mat4[] cases = {
+                dev.blendemotes.core.math.Mat4.translation(1, -2, 3)
+                        .mul(dev.blendemotes.core.math.Mat4.rotationZYX(0.3, -1.1, 2.0))
+                        .mul(dev.blendemotes.core.math.Mat4.scaling(1.5, 0.5, 2)),
+                dev.blendemotes.core.math.Mat4.translation(0, 12, 0)
+                        .mul(dev.blendemotes.core.math.Mat4.rotationZYX(3.0, 0.2, -0.4))
+                        .mul(dev.blendemotes.core.math.Mat4.scaling(-1, 1, 1)),
+                dev.blendemotes.core.math.Mat4.identity()};
+        for (dev.blendemotes.core.math.Mat4 m : cases) {
+            double[] d = m.decompose();
+            dev.blendemotes.core.math.Quat q = new dev.blendemotes.core.math.Quat(d[3], d[4], d[5], d[6]);
+            dev.blendemotes.core.math.Mat4 back = dev.blendemotes.core.math.Mat4.translation(d[0], d[1], d[2])
+                    .mul(q.toMatrix())
+                    .mul(dev.blendemotes.core.math.Mat4.scaling(d[7], d[8], d[9]));
+            TestRunner.check(back.approxEquals(m, 1e-9), "decompose round trip " + m + " -> " + back);
+        }
+    }
 }

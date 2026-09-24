@@ -95,7 +95,7 @@ public final class LegacyEmotes {
 
             @Override
             public File gameDirectory() {
-                return Minecraft.getMinecraft().mcDataDir;
+                return Compat.gameDir();
             }
 
             @Override

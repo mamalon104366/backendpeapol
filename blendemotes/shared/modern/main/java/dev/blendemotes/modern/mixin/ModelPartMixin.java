@@ -98,15 +98,27 @@ public abstract class ModelPartMixin implements BendablePart {
         }
     }
 
+    //#if MC >= 12100
+    @Inject(method = "compile", at = @At("HEAD"), cancellable = true)
+    private void blendemotes$compile(PoseStack.Pose pose, VertexConsumer consumer, int light, int overlay, int color,
+                                     CallbackInfo ci) {
+        if (blendemotes$active && blendemotes$bend != 0 && blendemotes$mesh != null) {
+            MeshEmitter.emit(blendemotes$mesh.deform(blendemotes$bend, blendemotes$joint, blendemotes$buffer),
+                    pose, consumer, light, overlay, color);
+            ci.cancel();
+        }
+    }
+    //#else
     @Inject(method = "compile", at = @At("HEAD"), cancellable = true)
     private void blendemotes$compile(PoseStack.Pose pose, VertexConsumer consumer, int light, int overlay,
                                      float r, float g, float b, float a, CallbackInfo ci) {
         if (blendemotes$active && blendemotes$bend != 0 && blendemotes$mesh != null) {
             MeshEmitter.emit(blendemotes$mesh.deform(blendemotes$bend, blendemotes$joint, blendemotes$buffer),
-                    pose, consumer, light, overlay, r, g, b, a);
+                    pose, consumer, light, overlay, MeshEmitter.argb(r, g, b, a));
             ci.cancel();
         }
     }
+    //#endif
 
     /** Armour and the second skin layer copy the pose of the base parts: copy the emote state too. */
     @Inject(method = "copyFrom", at = @At("TAIL"))
