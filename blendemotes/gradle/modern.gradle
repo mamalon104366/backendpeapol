@@ -133,13 +133,15 @@ sourceSets {
     main {
         compileClasspath += configurations.mainImplementation
         runtimeClasspath += configurations.mainImplementation
+        // The core (no Minecraft code) is compiled into the mod itself: Forge and NeoForge only let
+        // a mod see the classes of its own module, in development runs as well as in the game.
+        java.srcDir(rootProject.file("core/src/main/java"))
+        resources.srcDir(rootProject.file("core/src/main/resources"))
     }
 }
 
 dependencies {
-    mainImplementation project(":core")
     mainImplementation "org.spongepowered:mixin:0.8.5"
-    loaders.each { l -> add("${l}Implementation", project(":core")) }
     if (loaders.contains("fabric")) {
         // only the Fabric API modules the mod uses (players with the full Fabric API have them)
         (project.findProperty("fabricApiModules") ?: FABRIC_API_MODULES).each {
@@ -155,13 +157,6 @@ dependencies {
 
 jar {
     enabled = false
-}
-
-// The core (no Minecraft code) is copied into every mod jar.
-loaders.each { l ->
-    tasks.matching { it.name == "${l}Jar" }.configureEach {
-        from(project(":core").sourceSets.main.output)
-    }
 }
 
 apply from: rootProject.file("gradle/preprocess.gradle")
