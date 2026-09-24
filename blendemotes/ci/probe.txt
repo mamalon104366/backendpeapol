@@ -1,5 +1,13 @@
 # Development probe requests (see the probe job in .github/workflows/blendemotes.yml).
 # <minecraft>: <gradle task and properties>
+1.16.5: apiDump -PapiSpec=ci/probe-spec.txt
+1.18.2: apiDump -PapiSpec=ci/probe-spec.txt
+1.19.2: apiDump -PapiSpec=ci/probe-spec.txt
+1.20.1: apiDump -PapiSpec=ci/probe-spec.txt
+1.20.4: apiDump -PapiSpec=ci/probe-spec.txt
+1.21.1: apiDump -PapiSpec=ci/probe-spec.txt
+1.21.4: apiDump -PapiSpec=ci/probe-spec.txt
+1.21.8: apiDump -PapiSpec=ci/probe-spec.txt
 1.21.10: apiDump -PapiSpec=ci/probe-spec.txt
 1.21.11: apiDump -PapiSpec=ci/probe-spec.txt
 26.1.2: apiDump -PapiSpec=ci/probe-spec.txt

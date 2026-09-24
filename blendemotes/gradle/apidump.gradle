@@ -66,9 +66,12 @@ tasks.register("apiDump") {
             }
             println("APIDUMP ===== [$setName] $cls")
             def pattern = grep ? java.util.regex.Pattern.compile(grep) : null
+            def constructor = " " + cls.replace('$', '.') + "("
+            def constructorNested = " " + cls + "("
             out.toString("UTF-8").eachLine { line ->
                 boolean header = !line.startsWith("  ")
-                if (pattern == null || header || pattern.matcher(line).find()) {
+                boolean isConstructor = line.contains(constructor) || line.contains(constructorNested)
+                if (pattern == null || header || isConstructor || pattern.matcher(line).find()) {
                     println("APIDUMP " + line)
                 }
             }

@@ -89,6 +89,29 @@ net.minecraft.client.multiplayer.ClientPacketListener | send\(|handleCustomPaylo
 net.minecraft.client.multiplayer.ClientCommonPacketListenerImpl | send\(|handleCustomPayload
 net.minecraft.client.renderer.texture.AbstractTexture | <init>|setFilter|getTexture|close
 net.minecraft.world.level.levelgen.presets.WorldPresets | FLAT|NORMAL|createNormalWorldDimensions|fromSettings
+net.minecraft.client.gui.GuiComponent | blit|fill\(|drawCenteredString|drawString
+com.mojang.blaze3d.systems.RenderSystem | setShaderTexture|enableBlend|disableBlend|setShaderColor|defaultBlendFunc|setShader\(
+net.minecraft.client.renderer.texture.TextureManager | bind|register|release
+net.minecraft.client.renderer.texture.DynamicTexture | setFilter
+net.minecraft.world.entity.LivingEntity | isSleeping|isDeadOrDying|isFallFlying|hurtTime|isPassenger|getItemBySlot
+net.minecraft.world.level.LevelSettings
+net.minecraft.world.level.levelgen.WorldOptions | WorldOptions\(|defaultWithRandomSeed
+net.minecraft.world.level.GameRules | GameRules\(
+net.minecraft.world.level.gamerules.GameRules | GameRules\(
+net.minecraft.client.gui.screens.worldselection.WorldOpenFlows #code createFreshLevel
+net.minecraft.client.renderer.RenderPipelines | GUI_TEXTURED|GUI\b|ENTITY
+net.minecraft.client.renderer.RenderType | guiTextured|entitySolid|entityCutoutNoCull|entityTranslucent
+net.minecraft.client.renderer.entity.layers.CapeLayer
+net.minecraft.client.renderer.entity.layers.ItemInHandLayer #code render|submit|renderArmWithItem
+net.minecraft.client.renderer.entity.layers.PlayerItemInHandLayer #code render|submit|renderArmWithItem
+net.minecraft.client.model.ElytraModel | setupAnim|ElytraModel\(
+net.minecraft.client.renderer.entity.player.PlayerRenderer | PlayerRenderer\(|extractRenderState|renderHand|renderRightHand
+net.minecraft.client.player.AbstractClientPlayer | getSkin|getModelName|isCapeLoaded|getCloakTextureLocation|isModelPartShown|getSkinTextureLocation
+net.minecraft.world.entity.player.Player | isModelPartShown
+net.minecraft.client.resources.PlayerSkin
+net.minecraft.world.entity.player.PlayerSkin
+net.minecraft.client.renderer.MultiBufferSource | getBuffer
+net.minecraft.client.Screenshot
 @set fabric
 net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking
 net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking
