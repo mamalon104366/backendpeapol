@@ -1,0 +1,17 @@
+plugins {
+    id "java"
+    id "xyz.wagyourtail.unimined" version "${unimined_version}"
+}
+
+// Minecraft 1.21.10: everything else is in gradle/modern.gradle and shared/modern.
+ext {
+    minecraft = "1.21.10"
+    mcVersion = 12110
+    javaVersion = 21
+    fabricLoader = "0.19.5"
+    fabricApi = "0.138.4+1.21.10"
+    forge = "60.1.15"
+    neoforge = "net.neoforged:neoforge:21.10.64:universal"
+}
+
+apply from: rootProject.file("gradle/modern.gradle")

@@ -1,0 +1,114 @@
+# Classes printed by the probe job for every version listed in ci/probe.txt.
+@set main
+find: net\.minecraft\.(resources\.(ResourceLocation|Identifier)|client\.renderer\.entity\.state\..*|client\.renderer\.(SubmitNodeCollector|OrderedSubmitNodeCollector|SubmitNodeStorage)|client\.renderer\.entity\.layers\..*|client\.model\.(PlayerModel|PlayerCapeModel|HumanoidModel|geom\.ModelPart.*)|client\.model\.player\..*|network\.protocol\.common\.custom\.CustomPacketPayload|client\.gui\.GuiGraphics.*)
+net.minecraft.client.model.geom.ModelPart
+net.minecraft.client.model.geom.ModelPart$Cube
+net.minecraft.client.model.PlayerModel
+net.minecraft.client.model.player.PlayerModel
+net.minecraft.client.model.PlayerCapeModel
+net.minecraft.client.model.player.PlayerCapeModel
+net.minecraft.client.model.HumanoidModel | setupAnim|translateToHand|<init>|prepareMobModel|copyPropertiesTo|ModelPart |ArmPose
+net.minecraft.client.renderer.entity.player.PlayerRenderer
+net.minecraft.client.renderer.entity.player.AvatarRenderer
+net.minecraft.client.renderer.entity.LivingEntityRenderer | render|submit|setupRotations|scale|getModel|extractRenderState|<init>|addLayer|layers|model
+net.minecraft.client.renderer.entity.EntityRenderer | render\(|submit|extractRenderState|createRenderState|<init>
+net.minecraft.client.renderer.entity.layers.CapeLayer
+net.minecraft.client.renderer.entity.layers.ElytraLayer
+net.minecraft.client.renderer.entity.layers.WingsLayer
+net.minecraft.client.renderer.entity.layers.HumanoidArmorLayer | <init>|render|submit|Model|setPartVisibility|renderArmorPiece|getArmorModel
+net.minecraft.client.renderer.entity.layers.ItemInHandLayer | <init>|render|submit|renderArmWithItem
+net.minecraft.client.renderer.entity.layers.PlayerItemInHandLayer | <init>|render|submit|renderArmWithItem
+net.minecraft.client.renderer.entity.layers.RenderLayer | <init>|render|submit|getParentModel
+net.minecraft.client.renderer.entity.state.PlayerRenderState
+net.minecraft.client.renderer.entity.state.AvatarRenderState
+net.minecraft.client.renderer.entity.state.HumanoidRenderState
+net.minecraft.client.renderer.entity.state.LivingEntityRenderState
+net.minecraft.client.renderer.entity.state.EntityRenderState
+net.minecraft.client.renderer.SubmitNodeCollector
+net.minecraft.client.renderer.SubmitNodeCollection
+net.minecraft.client.renderer.OrderedSubmitNodeCollector
+com.mojang.blaze3d.vertex.VertexConsumer
+com.mojang.blaze3d.vertex.PoseStack
+com.mojang.blaze3d.vertex.PoseStack$Pose
+net.minecraft.client.renderer.RenderType | entitySolid|entityCutout|entityTranslucent|armorCutout|text\(|gui\(
+net.minecraft.client.renderer.rendertype.RenderTypes | entitySolid|entityCutout|entityTranslucent|armorCutout
+net.minecraft.client.KeyMapping | <init>|consumeClick|isDown|key|getKey|Category|matches|setDown|click
+net.minecraft.client.KeyMapping$Category
+net.minecraft.client.gui.screens.Screen | render|init|mouse|key|isPauseScreen|onClose|addRenderableWidget|<init>|font|width|height|minecraft|charTyped|tick|clearWidgets
+net.minecraft.client.gui.GuiGraphics | fill|blit|drawString|drawCenteredString|pose|<init>|renderItem|enableScissor|flush|guiWidth|submit|textRenderer|renderOutline
+net.minecraft.client.gui.components.Button | builder|<init>|OnPress
+net.minecraft.client.gui.components.Button$Builder | bounds|build|<init>|size|pos
+net.minecraft.client.input.MouseButtonEvent
+net.minecraft.client.input.KeyEvent
+net.minecraft.client.Minecraft | createWorldOpenFlows|FrameTime|DeltaTracker|getTimer|options|screen|player|level|gameDirectory|TextureManager|setScreen|stop|isPaused|RenderTarget|getWindow|timer|getInstance|getConnection|execute|tell|getSingleplayerServer|mouseHandler|getLevelSource|keyboardHandler
+net.minecraft.client.DeltaTracker
+net.minecraft.client.gui.screens.worldselection.WorldOpenFlows
+net.minecraft.client.Screenshot | grab|takeScreenshot
+net.minecraft.client.Options | CameraType|hideGui|keyMappings|keyUp|keyJump|keyShift|keyAttack|keyUse|keyDown|keyLeft|keyRight|load|save
+com.mojang.blaze3d.platform.NativeImage | read|<init>|setPixel|getPixel|close|upload|Format
+net.minecraft.client.renderer.texture.DynamicTexture | <init>|upload|getPixels
+net.minecraft.client.renderer.texture.TextureManager | register|release|getTexture
+net.minecraft.network.protocol.common.custom.CustomPacketPayload
+net.minecraft.network.protocol.common.custom.CustomPacketPayload$Type
+net.minecraft.network.protocol.common.ServerboundCustomPayloadPacket | <init>|payload|STREAM|CODEC
+net.minecraft.network.protocol.common.ClientboundCustomPayloadPacket | <init>|payload|STREAM|CODEC
+net.minecraft.network.protocol.game.ServerboundCustomPayloadPacket | <init>|getData|getIdentifier|getName|data|identifier
+net.minecraft.network.protocol.game.ClientboundCustomPayloadPacket | <init>|getData|getIdentifier|getName|data|identifier
+net.minecraft.network.codec.StreamCodec | of\(|ofMember|unit
+net.minecraft.network.chat.Component | translatable|literal|nullToEmpty
+net.minecraft.client.player.AbstractClientPlayer | getModelName|getSkin|SkinTexture|Cloak|isModelPartShown|getPlayerInfo|elytra|Elytra
+net.minecraft.world.entity.Entity | getUUID|tickCount|getId\(|level\(|isSpectator|isInvisible
+net.minecraft.client.player.LocalPlayer | input|isShiftKeyDown|isUsingItem|hurtTime|getHealth|swinging
+net.minecraft.client.player.Input
+net.minecraft.client.player.ClientInput
+net.minecraft.world.entity.player.Input
+net.minecraft.server.players.PlayerList | getPlayers|getPlayer\(
+net.minecraft.server.level.ServerPlayer | connection|getServer|server\b|level\(|serverLevel
+net.minecraft.server.network.ServerGamePacketListenerImpl | send\(|handleCustomPayload|player
+net.minecraft.server.network.ServerCommonPacketListenerImpl | send\(|handleCustomPayload
+net.minecraft.client.multiplayer.ClientPacketListener | send\(|handleCustomPayload
+net.minecraft.client.multiplayer.ClientCommonPacketListenerImpl | send\(|handleCustomPayload
+net.minecraft.client.renderer.texture.AbstractTexture | <init>|setFilter|getTexture|close
+net.minecraft.world.level.levelgen.presets.WorldPresets | FLAT|NORMAL|createNormalWorldDimensions|fromSettings
+@set fabric
+net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking
+net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking
+net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry
+net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents
+net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents
+net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper
+net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
+net.fabricmc.fabric.api.networking.v1.PacketByteBufs
+find: net\.fabricmc\.fabric\.api\.(client\.)?networking\.v1\..*
+@set forge
+find: net\.minecraftforge\.(network|client\.event|event|fml\.javafmlmod|eventbus\.api\.bus|eventbus\.api\.listener)\.[A-Za-z$]*
+net.minecraftforge.network.NetworkRegistry | newEventChannel|ChannelBuilder|acceptMissingOr
+net.minecraftforge.network.ChannelBuilder
+net.minecraftforge.network.EventNetworkChannel
+net.minecraftforge.network.NetworkEvent
+net.minecraftforge.network.CustomPayloadEvent
+net.minecraftforge.event.network.CustomPayloadEvent
+net.minecraftforge.event.network.CustomPayloadEvent$Context
+net.minecraftforge.network.PacketDistributor
+net.minecraftforge.event.TickEvent$ClientTickEvent
+net.minecraftforge.client.event.RegisterKeyMappingsEvent
+net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext
+net.minecraftforge.event.entity.player.PlayerEvent$PlayerLoggedOutEvent
+net.minecraftforge.client.ClientRegistry
+net.minecraftforge.fml.DistExecutor
+net.minecraftforge.common.MinecraftForge
+@set neoforge
+find: net\.neoforged\.neoforge\.(network|client\.event)\.[A-Za-z$.]*
+net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent
+net.neoforged.neoforge.network.event.RegisterPayloadHandlerEvent
+net.neoforged.neoforge.network.registration.PayloadRegistrar
+net.neoforged.neoforge.network.registration.IPayloadRegistrar
+net.neoforged.neoforge.network.PacketDistributor
+net.neoforged.neoforge.network.handling.IPayloadContext
+net.neoforged.neoforge.network.handling.IPayloadHandler
+net.neoforged.neoforge.client.event.ClientTickEvent$Post
+net.neoforged.neoforge.event.TickEvent$ClientTickEvent
+net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent
+net.neoforged.neoforge.event.entity.player.PlayerEvent$PlayerLoggedOutEvent
+net.neoforged.fml.common.Mod
+net.neoforged.neoforge.common.NeoForge

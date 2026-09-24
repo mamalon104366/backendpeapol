@@ -3,14 +3,14 @@ plugins {
     id "xyz.wagyourtail.unimined" version "${unimined_version}"
 }
 
-// Minecraft 1.20.1: everything else is in gradle/modern.gradle and shared/modern.
+// Minecraft 1.19.2: everything else is in gradle/modern.gradle and shared/modern.
 ext {
-    minecraft = "1.20.1"
-    mcVersion = 12001
+    minecraft = "1.19.2"
+    mcVersion = 11902
     javaVersion = 17
     fabricLoader = "0.19.5"
-    fabricApi = "0.92.12+1.20.1"
-    forge = "47.4.23"
+    fabricApi = "0.77.0+1.19.2"
+    forge = "43.5.2"
 }
 
 apply from: rootProject.file("gradle/modern.gradle")

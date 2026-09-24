@@ -3,25 +3,42 @@
 //
 //   ./gradlew :mc-1.20.1:apiDump -PapiSet=main -PapiClasses=net.minecraft.client.model.geom.ModelPart
 //   ./gradlew :mc-1.20.1:apiDump -PapiSet=forge -PapiFind='.*CustomPayload.*'
+//   ./gradlew :mc-1.20.1:apiDump -PapiSpec=ci/probe-spec.txt
 //
 // apiClasses: comma separated class names, printed with javap -p.
 // apiFind: regular expression matched against class names on the classpath (only listed).
+// apiGrep: only print the members matching this regular expression.
+// apiSpec: file with one request per line:
+//     @set fabric                    switch source set (main, fabric, forge, neoforge)
+//     find: <regex>                  list matching class names
+//     <class>                        javap the class
+//     <class> | <regex>              javap the class, only members matching the regex
 
 tasks.register("apiDump") {
     group = "help"
     description = "Prints class signatures from the compile classpath (CI helper)"
     doLast {
-        def setName = project.findProperty("apiSet") ?: "main"
-        def sourceSet = project.sourceSets.getByName(setName)
-        def jars = sourceSet.compileClasspath.files.findAll { it.isFile() && it.name.endsWith(".jar") }
-        def find = project.findProperty("apiFind")
-        if (find) {
-            def pattern = java.util.regex.Pattern.compile(find.toString())
+        def javapVersion = Math.max(21, (project.findProperty("javaVersion") ?: 21) as int)
+        def javaHome = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(javapVersion) }.get()
+                .metadata.installationPath.asFile
+        def javap = new File(javaHome, "bin/javap").absolutePath
+
+        def jarsOf = { String setName ->
+            def sourceSet = project.sourceSets.findByName(setName)
+            sourceSet == null ? null : sourceSet.compileClasspath.files.findAll { it.isFile() && it.name.endsWith(".jar") }
+        }
+        def find = { String setName, String regex ->
+            def jars = jarsOf(setName)
+            if (jars == null) {
+                println("APIDUMP (no source set $setName)")
+                return
+            }
+            def pattern = java.util.regex.Pattern.compile(regex)
             def found = new TreeSet<String>()
             jars.each { jar ->
                 new java.util.zip.ZipFile(jar).withCloseable { zip ->
                     zip.entries().each { e ->
-                        if (e.name.endsWith(".class") && !e.name.contains('$')) {
+                        if (e.name.endsWith(".class")) {
                             def cls = e.name.substring(0, e.name.length() - 6).replace('/', '.')
                             if (pattern.matcher(cls).matches()) {
                                 found.add(cls + "   [" + jar.name + "]")
@@ -30,25 +47,59 @@ tasks.register("apiDump") {
                     }
                 }
             }
-            println("APIDUMP find '$find' in $setName: ${found.size()} classes")
+            println("APIDUMP find '$regex' in $setName: ${found.size()} classes")
             found.each { println("APIDUMP   " + it) }
         }
-        def classes = project.findProperty("apiClasses")
-        if (classes) {
-            def javaHome = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(21) }.get()
-                    .metadata.installationPath.asFile
-            def javap = new File(javaHome, "bin/javap").absolutePath
-            def cp = jars.collect { it.absolutePath }.join(File.pathSeparator)
-            classes.toString().split(",").each { cls ->
-                def out = new ByteArrayOutputStream()
-                project.exec {
-                    commandLine javap, "-p", "-cp", cp, cls.trim()
-                    standardOutput = out
-                    errorOutput = out
-                    ignoreExitValue = true
+        def dump = { String setName, String cls, String grep ->
+            def jars = jarsOf(setName)
+            if (jars == null) {
+                println("APIDUMP (no source set $setName)")
+                return
+            }
+            def out = new ByteArrayOutputStream()
+            project.exec {
+                commandLine javap, "-p", "-cp", jars.collect { it.absolutePath }.join(File.pathSeparator), cls
+                standardOutput = out
+                errorOutput = out
+                ignoreExitValue = true
+            }
+            println("APIDUMP ===== [$setName] $cls")
+            def pattern = grep ? java.util.regex.Pattern.compile(grep) : null
+            out.toString("UTF-8").eachLine { line ->
+                boolean header = !line.startsWith("  ")
+                if (pattern == null || header || pattern.matcher(line).find()) {
+                    println("APIDUMP " + line)
                 }
-                println("APIDUMP ===== " + cls.trim())
-                out.toString("UTF-8").eachLine { println("APIDUMP " + it) }
+            }
+        }
+
+        String setName = (project.findProperty("apiSet") ?: "main").toString()
+        if (project.findProperty("apiFind")) {
+            find(setName, project.findProperty("apiFind").toString())
+        }
+        if (project.findProperty("apiClasses")) {
+            project.findProperty("apiClasses").toString().split(",").each {
+                dump(setName, it.trim(), project.findProperty("apiGrep")?.toString())
+            }
+        }
+        if (project.findProperty("apiSpec")) {
+            rootProject.file(project.findProperty("apiSpec").toString()).eachLine { raw ->
+                def line = raw.trim()
+                if (line.isEmpty() || line.startsWith("#")) {
+                    return
+                }
+                if (line.startsWith("@set ")) {
+                    setName = line.substring(5).trim()
+                } else if (line.startsWith("find:")) {
+                    find(setName, line.substring(5).trim())
+                } else {
+                    int bar = line.indexOf(" | ")
+                    if (bar < 0) {
+                        dump(setName, line, null)
+                    } else {
+                        dump(setName, line.substring(0, bar).trim(), line.substring(bar + 3).trim())
+                    }
+                }
             }
         }
     }

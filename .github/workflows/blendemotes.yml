@@ -48,6 +48,7 @@ jobs:
             8
             17
             21
+            25
       - uses: gradle/actions/setup-gradle@v4
         with:
           cache-read-only: false
@@ -61,38 +62,49 @@ jobs:
             blendemotes/versions/*/build/libs/*.jar
           if-no-files-found: ignore
 
-  # Development helper: prints Minecraft API signatures listed in blendemotes/ci/probe.txt
-  # (one Gradle invocation per line, e.g. ":mc-1.20.1:apiDump -PapiClasses=a.b.C").
-  probe:
+  # Development helper: prints Minecraft API signatures requested in blendemotes/ci/probe.txt.
+  # Lines look like "1.21.1: apiDump -PapiSet=main -PapiClasses=a.b.C" and run as
+  # ./gradlew -PmcVersions=1.21.1 :mc-1.21.1:apiDump ..., one parallel job per version.
+  probe-plan:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    outputs:
+      versions: ${{ steps.plan.outputs.versions }}
     steps:
       - uses: actions/checkout@v4
-      - name: Check for probe requests
-        id: check
+      - id: plan
         run: |
-          if [ -s ci/probe.txt ]; then echo "run=true" >> "$GITHUB_OUTPUT"; else echo "run=false" >> "$GITHUB_OUTPUT"; fi
+          v=$( (grep -v -E '^\s*(#|$)' ci/probe.txt 2>/dev/null || true) | cut -d: -f1 | sort -u | jq -R . | jq -s -c . )
+          echo "versions=${v:-[]}" >> "$GITHUB_OUTPUT"
+          echo "probe versions: ${v:-[]}"
+          bash ci/versions.sh || true
+
+  probe:
+    needs: probe-plan
+    if: needs.probe-plan.outputs.versions != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        mc: ${{ fromJSON(needs.probe-plan.outputs.versions) }}
+    steps:
+      - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
-        if: steps.check.outputs.run == 'true'
         with:
           distribution: temurin
           java-version: |
             8
             17
             21
+            25
       - uses: gradle/actions/setup-gradle@v4
-        if: steps.check.outputs.run == 'true'
         with:
           cache-read-only: false
-      - name: Loader versions
-        if: steps.check.outputs.run == 'true'
-        run: bash ci/versions.sh || true
       - name: API dump
-        if: steps.check.outputs.run == 'true'
         run: |
-          grep -v -E '^\s*(#|$)' ci/probe.txt | while IFS= read -r line; do
+          grep -E "^${{ matrix.mc }}:" ci/probe.txt | cut -d: -f2- | sed "s/^ *//" | while IFS= read -r line; do
             echo "APIDUMP >>>>> $line"
-            eval "./gradlew $line --console=plain -q" < /dev/null 2>&1 | grep -E "APIDUMP|error|Error|FAIL" | cut -c1-600 || true
+            eval "./gradlew -PmcVersions=${{ matrix.mc }} :mc-${{ matrix.mc }}:$line --console=plain -q" < /dev/null 2>&1 | grep -v -E "^\s*at |^Picked up" | cut -c1-700 || true
           done
 
   selftest:
@@ -124,6 +136,7 @@ jobs:
             8
             17
             21
+            25
       - uses: gradle/actions/setup-gradle@v4
         with:
           cache-read-only: false
