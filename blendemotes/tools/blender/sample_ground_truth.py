@@ -45,12 +45,44 @@ def args():
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     out = "truth.json"
     actions = None
+    mesh_frames = []
     for i, a in enumerate(argv):
         if a == "--out":
             out = argv[i + 1]
         if a == "--actions":
             actions = argv[i + 1].split(",")
-    return out, actions
+        if a == "--mesh-frames":
+            mesh_frames = [float(x) for x in argv[i + 1].split(",")]
+    return out, actions, mesh_frames
+
+
+MESH_GROUPS = {
+    "left_arm": ("left_arm", "left_arm_bend"), "right_arm": ("right_arm", "right_arm_bend"),
+    "left_leg": ("left_leg", "left_leg_bend"), "right_leg": ("right_leg", "right_leg_bend"),
+    "torso": ("torso", "torso_bend"),
+}
+
+
+def sample_mesh(scene, frames):
+    """Rest and deformed positions of the player mesh vertices, per part."""
+    ob = bpy.data.objects["player_mesh"]
+    names = {g.index: g.name for g in ob.vertex_groups}
+    part_of = {}
+    for v in ob.data.vertices:
+        gs = {names[g.group]: g.weight for g in v.groups}
+        for part, (a, b) in MESH_GROUPS.items():
+            if gs.get(a, 0) + gs.get(b, 0) > 0.5 and gs.get("head", 0) < 0.5:
+                part_of[v.index] = part
+    rest = {i: tuple(round(c, 6) for c in ob.data.vertices[i].co) for i in part_of}
+    out = []
+    for f in frames:
+        scene.frame_set(int(f), subframe=f - int(f))
+        dg = bpy.context.evaluated_depsgraph_get()
+        me = ob.evaluated_get(dg).to_mesh()
+        verts = [[part_of[i], rest[i], tuple(round(c, 6) for c in me.vertices[i].co)] for i in sorted(part_of)]
+        ob.evaluated_get(dg).to_mesh_clear()
+        out.append({"frame": f, "vertices": verts})
+    return out
 
 
 def sample(rig, scene, start, end):
@@ -86,7 +118,7 @@ def restore_constraints(rig, state):
 
 
 def main():
-    out, only = args()
+    out, only, mesh_frames = args()
     text = bpy.data.texts.get("action_settings_panel.py")
     if not hasattr(bpy.types.Action, "emote"):
         text.as_module().register()
@@ -148,6 +180,7 @@ def main():
                 pb.rotation_euler = (0, 0, 0)
                 pb.scale = (1, 1, 1)
         export_frames = sample(rig, scene, start, end)
+        mesh = sample_mesh(scene, mesh_frames) if mesh_frames else []
         restore_constraints(rig, state)
         rig.animation_data.action = action
         rig.animation_data.action_slot = original_slot
@@ -155,7 +188,7 @@ def main():
 
         result["actions"][action.name] = {
             "start": start, "end": end, "vanilla": vanilla,
-            "export": export_frames, "rig": rig_frames,
+            "export": export_frames, "rig": rig_frames, "mesh": mesh,
         }
         print(f"{action.name}: {len(export_frames)} muestras (vanilla={vanilla})")
 

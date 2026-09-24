@@ -9,10 +9,24 @@ package dev.blendemotes.core.rig;
  * Armature modifier) with a weight that depends on how far below the part pivot they are.
  */
 public final class BendProfile {
-    /** Elbow: 4 px below the shoulder pivot, the forearm (lower half) moves. */
-    public static final BendProfile ARM = limb(4, 0);
-    /** Knee: 6 px below the hip pivot, the shin (lower half) moves. */
-    public static final BendProfile LEG = limb(6, 0);
+    /**
+     * Elbow: 4 px below the shoulder pivot, the forearm (lower half) moves.
+     * Weights measured on the Blender rig's mesh (distance below the shoulder -> forearm weight).
+     */
+    public static final BendProfile ARM = new BendProfile(4, 0,
+            new double[]{1.954, 2.848, 2.947, 3.121, 3.195, 3.394, 3.443, 3.667, 3.691, 3.940,
+                    4.188, 4.213, 4.436, 4.486, 4.684, 4.758, 4.932},
+            new double[]{0.0, 0.187, 0.187, 0.265, 0.265, 0.343, 0.343, 0.422, 0.422, 0.500,
+                    0.578, 0.578, 0.657, 0.657, 0.735, 0.735, 1.0});
+    /**
+     * Knee: 6 px below the hip pivot, the shin (lower half) moves.
+     * Weights measured on the Blender rig's mesh.
+     */
+    public static final BendProfile LEG = new BendProfile(6, 0,
+            new double[]{3.868, 4.761, 4.860, 5.034, 5.109, 5.307, 5.357, 5.580, 5.605, 5.853,
+                    6.101, 6.126, 6.349, 6.399, 6.597, 6.672, 6.846, 6.945, 7.838},
+            new double[]{0.0, 0.187, 0.187, 0.265, 0.265, 0.343, 0.343, 0.422, 0.422, 0.500,
+                    0.578, 0.578, 0.657, 0.657, 0.735, 0.735, 0.813, 0.813, 1.0});
     /** Cape: bends at its middle, lower half moves. */
     public static final BendProfile CAPE = limb(8, 0);
     /**
@@ -21,8 +35,10 @@ public final class BendProfile {
      * Measured from the Blender mesh (distance below the neck -> weight of the bend bone).
      */
     public static final BendProfile TORSO = new BendProfile(6, 0,
-            new double[]{-0.31, 0.73, 1.77, 2.81, 3.86, 4.90, 5.94, 6.98, 8.02, 9.07, 10.11, 11.15, 12.19},
-            new double[]{0.961, 0.844, 0.738, 0.642, 0.555, 0.474, 0.400, 0.332, 0.269, 0.210, 0.155, 0.105, 0.057});
+            new double[]{-0.611, -0.015, 0.481, 0.977, 1.573, 1.970, 2.665, 2.962, 3.757, 3.955, 4.848, 4.948,
+                    5.940, 6.933, 7.032, 7.925, 8.124, 8.918, 9.216, 9.910, 10.307, 10.903, 11.399, 11.896, 12.491},
+            new double[]{0.961, 0.961, 0.844, 0.844, 0.738, 0.738, 0.642, 0.642, 0.555, 0.555, 0.474, 0.474,
+                    0.400, 0.332, 0.332, 0.269, 0.269, 0.210, 0.210, 0.155, 0.155, 0.105, 0.105, 0.057, 0.057});
 
     /** Joint position in part-local space (Y down from the pivot). */
     public final double jointY;

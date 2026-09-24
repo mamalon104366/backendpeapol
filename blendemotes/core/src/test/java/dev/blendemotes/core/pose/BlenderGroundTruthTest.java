@@ -154,7 +154,7 @@ public class BlenderGroundTruthTest {
         PlayerPose pose = PoseEvaluator.evaluate(anim, 0.6, new VanillaPose(), new PlayerPose());
         for (PlayerPart p : PlayerPart.VALUES) {
             Mat4 fromTransform = pose.transform(p).toMatrix();
-            Vec3 pv = p.defaultPivot;
+            Vec3 pv = pose.rig().pivot(p);
             Mat4 expected = pose.matrix(p).mul(Mat4.translation(pv.x, pv.y, pv.z));
             TestRunner.check(fromTransform.approxEquals(expected, 1e-6), "decomposition of " + p + " differs: " + fromTransform + " vs " + expected);
         }

@@ -86,10 +86,31 @@ public final class Molang {
         if (p.pos != p.src.length()) {
             throw new IllegalArgumentException("Unexpected '" + p.src.charAt(p.pos) + "' in molang: " + source);
         }
-        if (e.isConstant() && !(e instanceof Const)) {
-            return new Const(e.eval(ZERO_CONTEXT));
+        if (e.isConstant()) {
+            return e instanceof Const ? e : new Const(e.eval(ZERO_CONTEXT));
         }
-        return e;
+        return new Sourced(source.trim(), e);
+    }
+
+    /** A non-constant expression that remembers its text (needed to send it over the network). */
+    public static final class Sourced implements Expr {
+        public final String source;
+        private final Expr expr;
+
+        Sourced(String source, Expr expr) {
+            this.source = source;
+            this.expr = expr;
+        }
+
+        @Override
+        public double eval(Context ctx) {
+            return expr.eval(ctx);
+        }
+
+        @Override
+        public boolean isConstant() {
+            return false;
+        }
     }
 
     // ------------------------------------------------------------------ parser

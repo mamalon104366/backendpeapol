@@ -67,7 +67,7 @@ public final class PlayerPose {
     }
 
     private void updateTransform(PlayerPart part) {
-        Vec3 p = part.defaultPivot;
+        Vec3 p = rig.pivot(part);
         PartTransform t = PartTransform.fromMatrix(matrices.get(part).mul(Mat4.translation(p.x, p.y, p.z)));
         PartTransform dst = transforms.get(part);
         dst.set(t.x, t.y, t.z, t.pitch, t.yaw, t.roll).setScale(t.scaleX, t.scaleY, t.scaleZ);
@@ -95,9 +95,9 @@ public final class PlayerPose {
             return out.set(b);
         }
         out.rig = b.rig;
-        out.root.set(blendMatrix(a.root, b.root, RigDefinition.MINECRAFT.bodyPivot, weight));
+        out.root.set(blendMatrix(a.root, b.root, b.rig.bodyPivot, weight));
         for (PlayerPart p : PlayerPart.VALUES) {
-            Mat4 m = blendMatrix(a.matrix(p), b.matrix(p), p.defaultPivot, weight);
+            Mat4 m = blendMatrix(a.matrix(p), b.matrix(p), b.rig.pivot(p), weight);
             out.setPart(p, m, a.bend(p) + (b.bend(p) - a.bend(p)) * weight);
         }
         return out;

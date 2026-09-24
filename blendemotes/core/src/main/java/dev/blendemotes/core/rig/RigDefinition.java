@@ -26,6 +26,8 @@ public final class RigDefinition {
     }
 
     public static final RigDefinition MINECRAFT;
+    /** Player model with slim (3 px) arms: the arms hang from y = 2.5 instead of 2. */
+    public static final RigDefinition MINECRAFT_SLIM;
     public static final RigDefinition BLENDER;
 
     static {
@@ -38,6 +40,10 @@ public final class RigDefinition {
             }
         }
         MINECRAFT = new RigDefinition(new Vec3(0, 12, 0), mc, mcJoints);
+        Map<PlayerPart, Vec3> slim = new EnumMap<PlayerPart, Vec3>(mc);
+        slim.put(PlayerPart.RIGHT_ARM, new Vec3(-5, 2.5, 0));
+        slim.put(PlayerPart.LEFT_ARM, new Vec3(5, 2.5, 0));
+        MINECRAFT_SLIM = new RigDefinition(new Vec3(0, 12, 0), slim, mcJoints);
 
         // bone heads of emote_creator.blend (rig 2.0) converted to Minecraft model space:
         // mc = (4x, 24 - 4z, 4y)
@@ -75,6 +81,10 @@ public final class RigDefinition {
     /** Item bones of the Blender rig point forward, so their Euler order maps to X, Z, Y. */
     public boolean blenderXzyOrder(PlayerPart part) {
         return part == PlayerPart.RIGHT_ITEM || part == PlayerPart.LEFT_ITEM;
+    }
+
+    public static RigDefinition minecraft(boolean slim) {
+        return slim ? MINECRAFT_SLIM : MINECRAFT;
     }
 
     public Vec3 pivot(PlayerPart part) {
