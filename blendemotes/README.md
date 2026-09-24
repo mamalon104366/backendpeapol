@@ -98,33 +98,58 @@ Canal de red: `blendemotes:main` (el mismo en todas las versiones, 1.8.9 incluid
 
 ## Versiones
 
-| Minecraft | Loaders | Estado |
+Un solo código fuente compartido (`shared/legacy` para 1.8.9–1.12.2 y `shared/modern` para
+1.16.5 en adelante) se compila para cada versión con un preprocesador (`//#if MC >= ...`).
+
+| Minecraft | Loaders | Java |
 |---|---|---|
-| 1.8.9 | Forge, Legacy Fabric | compila en CI, prueba en juego en CI |
-| 1.20.1 | Fabric, Forge | en desarrollo |
+| 1.8.9 | Forge, Legacy Fabric | 8 |
+| 1.12.2 | Forge, Legacy Fabric | 8 |
+| 1.16.5 | Forge, Fabric | 8 |
+| 1.18.2 | Forge, Fabric | 17 |
+| 1.19.2 | Forge, Fabric | 17 |
+| 1.20.1 | Forge, Fabric | 17 |
+| 1.20.4 | Forge, Fabric, NeoForge | 17 |
+| 1.21.1 | Forge, Fabric, NeoForge | 21 |
+| 1.21.4 | Forge, Fabric, NeoForge | 21 |
+| 1.21.8 | Forge, Fabric, NeoForge | 21 |
+| 1.21.10 | Forge, Fabric, NeoForge | 21 |
+| 1.21.11 | Forge, Fabric, NeoForge | 21 |
+| 26.1.2 | Forge, Fabric, NeoForge | 25 |
+| 26.3 | Forge, Fabric, NeoForge | 25 |
+
+Cada jar es para su versión exacta de Minecraft. Añadir otra versión es crear
+`versions/<versión>/build.gradle` (versiones de los loaders) y añadirla a `settings.gradle` y
+`ci/targets.txt`. CI compila todas y arranca el juego de verdad con cada loader.
 
 ## Compilar
 
-Requisitos: JDK 21 (y JDK 8/17 para las versiones antiguas, Gradle los encuentra solos).
+Requisitos: JDK 21 para Gradle, más JDK 8, 17 y 25 para las versiones que los usan (Gradle los
+busca solo).
 
 ```bash
-./gradlew build                       # todo
-./gradlew -PcoreOnly :core:check      # solo el núcleo y sus tests (sin descargar Minecraft)
-./gradlew build -PmcVersions=1.8.9    # solo algunas versiones
+bash tools/unimined/build.sh              # una vez: plugin Unimined fijado (necesario para 26.x)
+./gradlew build                           # todas las versiones
+./gradlew -PcoreOnly :core:check          # solo el núcleo y sus tests (sin descargar Minecraft)
+./gradlew build -PmcVersions=1.21.1       # solo algunas versiones (lista separada por comas)
+./gradlew -PmcVersions=1.21.1 :mc-1.21.1:fabricRunClient   # probar en el juego
 ```
 
 Los jars quedan en `versions/<versión>/build/libs/` (uno por loader).
 
 La integración continua (`.github/workflows/blendemotes.yml`) compila todo y además arranca
-Minecraft de verdad en una pantalla virtual, crea un mundo plano, reproduce los emotes
-incluidos y guarda capturas.
+Minecraft de verdad en una pantalla virtual para cada versión y loader, crea un mundo plano,
+reproduce los emotes incluidos y guarda capturas (se imprimen como hoja de contacto en el log).
 
 ## Estructura
 
 ```
 core/              núcleo sin Minecraft (Java 8): formato, curvas, rig, bends, red, config
   src/test/        tests, incluida la comparación contra Blender (tools/blender/*.py)
-versions/<mc>/     código de cada versión de Minecraft (main = común, fabric/forge = loader)
-gradle/preprocess.gradle   preprocesador para compartir código entre versiones
+shared/legacy/     código compartido 1.8.9–1.12.2 (nombres MCP)
+shared/modern/     código compartido 1.16.5+ (nombres de Mojang): main, fabric, forge, neoforge
+versions/<mc>/     un build.gradle por versión (versiones de los loaders y renombres)
+gradle/            lógica de build común y el preprocesador (preprocess.gradle)
+ci/                versiones de CI (targets.txt) y herramientas de consulta de API
 tools/blender/     exportador por lotes y generador de datos de referencia de Blender
 ```
