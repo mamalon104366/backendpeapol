@@ -12,6 +12,18 @@ ext {
     fabricApiVersion = "0.161.0+26.3"
     forge = "66.0.3"
     neoforge = "net.neoforged:neoforge:26.3.0.16-beta:universal"
+    // Fabric API renamed the key binding module for the Mojang names of 26.x
+    fabricApiModules = ["fabric-api-base", "fabric-networking-api-v1", "fabric-key-mapping-api-v1",
+                        "fabric-lifecycle-events-v1"]
+    // classes Mojang renamed or moved (whole words, see gradle/preprocess.gradle)
+    preprocessRenames = [
+            [12111, "ResourceLocation", "Identifier"],
+            [12111, "net.minecraft.client.model.PlayerModel", "net.minecraft.client.model.player.PlayerModel"],
+            [12111, "net.minecraft.client.renderer.RenderType", "net.minecraft.client.renderer.rendertype.RenderType"],
+            [12111, "net.minecraft.world.level.GameRules", "net.minecraft.world.level.gamerules.GameRules"],
+            [260100, "state.CameraRenderState", "state.level.CameraRenderState"],
+            [260100, "state/CameraRenderState", "state/level/CameraRenderState"]
+    ]
 }
 
 apply from: rootProject.file("gradle/modern.gradle")

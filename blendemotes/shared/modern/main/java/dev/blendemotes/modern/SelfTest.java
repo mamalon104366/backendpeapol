@@ -23,7 +23,7 @@ import net.minecraft.world.level.DataPackConfig;
 import net.minecraft.world.level.levelgen.WorldGenSettings;
 import net.minecraft.world.level.levelgen.presets.WorldPresets;
 //#else
-import net.minecraft.client.gui.screens.worldselection.WorldPreset;
+import dev.blendemotes.modern.mixin.WorldPresetAccessor;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.world.level.DataPackConfig;
 import net.minecraft.world.level.levelgen.WorldGenSettings;
@@ -161,13 +161,13 @@ final class SelfTest {
         LevelSettings settings = new LevelSettings(name, GameType.CREATIVE, false, Difficulty.PEACEFUL, true,
                 new GameRules(), DataPackConfig.DEFAULT);
         RegistryAccess.Frozen registries = RegistryAccess.BUILTIN.get();
-        WorldGenSettings gen = WorldPreset.FLAT.create(registries, 1L, false, false);
+        WorldGenSettings gen = WorldPresetAccessor.blendemotes$flat().create(registries, 1L, false, false);
         mc.createLevel(name, settings, registries, gen);
         //#else
         LevelSettings settings = new LevelSettings(name, GameType.CREATIVE, false, Difficulty.PEACEFUL, true,
                 new GameRules(), DataPackConfig.DEFAULT);
         RegistryAccess.RegistryHolder registries = RegistryAccess.builtin();
-        WorldGenSettings gen = WorldPreset.FLAT.create(registries, 1L, false, false);
+        WorldGenSettings gen = WorldPresetAccessor.blendemotes$flat().create(registries, 1L, false, false);
         mc.createLevel(name, settings, registries, gen);
         //#endif
     }

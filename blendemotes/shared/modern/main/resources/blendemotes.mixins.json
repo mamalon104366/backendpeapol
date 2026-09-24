@@ -15,6 +15,9 @@
 //#else
     "ElytraLayerMixin",
 //#endif
+//#if MC < 11900
+    "WorldPresetAccessor",
+//#endif
     "CapeLayerMixin",
     "HumanoidArmorLayerMixin",
     "KeyMappingAccessor",

@@ -155,3 +155,19 @@ net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent
 net.neoforged.neoforge.event.entity.player.PlayerEvent$PlayerLoggedOutEvent
 net.neoforged.fml.common.Mod
 net.neoforged.neoforge.common.NeoForge
+net.minecraft.client.gui.GuiGraphicsExtractor | blit|text|centered|Centered|drawString|pose|fill
+net.minecraft.world.level.LevelSettings$DifficultySettings
+net.minecraft.client.gui.components.events.GuiEventListener | mouse|key
+net.minecraft.client.gui.components.events.ContainerEventHandler | mouse|key
+net.minecraft.client.gui.screens.Screen | extract|render|Background
+net.minecraft.client.gui.components.Button | builder|<init>|extract|render
+com.mojang.blaze3d.platform.Window | handle|getWindow
+com.mojang.blaze3d.platform.InputConstants | isKeyDown|getKey|UNKNOWN
+@set fabric
+find: net\.fabricmc\.fabric\.api\.client\.key.*
+net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper
+@set forge
+net.minecraftforge.fml.loading.FMLEnvironment
+@set neoforge
+net.neoforged.fml.loading.FMLEnvironment
+net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent

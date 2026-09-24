@@ -115,15 +115,7 @@ public class EmoteWheelScreen extends GuiScreen {
             mc.displayGuiScreen(new EmoteMenuScreen(null));
             return;
         }
-        //#if MC >= 11202
-        try {
-            super.keyTyped(typedChar, key);
-        } catch (java.io.IOException ignored) {
-            // vanilla only closes the screen here
-        }
-        //#else
         super.keyTyped(typedChar, key);
-        //#endif
     }
 
     @Override
