@@ -115,3 +115,5 @@ tasks.withType(JavaExec).configureEach {
         jvmArgs("-Dblendemotes.selftest=true")
     }
 }
+
+apply from: rootProject.file("gradle/apidump.gradle")

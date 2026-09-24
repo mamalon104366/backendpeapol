@@ -1,0 +1,55 @@
+// Development helper for CI: prints the signatures of Minecraft / loader classes of this
+// version module (the machine that writes the code may not be able to download Minecraft).
+//
+//   ./gradlew :mc-1.20.1:apiDump -PapiSet=main -PapiClasses=net.minecraft.client.model.geom.ModelPart
+//   ./gradlew :mc-1.20.1:apiDump -PapiSet=forge -PapiFind='.*CustomPayload.*'
+//
+// apiClasses: comma separated class names, printed with javap -p.
+// apiFind: regular expression matched against class names on the classpath (only listed).
+
+tasks.register("apiDump") {
+    group = "help"
+    description = "Prints class signatures from the compile classpath (CI helper)"
+    doLast {
+        def setName = project.findProperty("apiSet") ?: "main"
+        def sourceSet = project.sourceSets.getByName(setName)
+        def jars = sourceSet.compileClasspath.files.findAll { it.isFile() && it.name.endsWith(".jar") }
+        def find = project.findProperty("apiFind")
+        if (find) {
+            def pattern = java.util.regex.Pattern.compile(find.toString())
+            def found = new TreeSet<String>()
+            jars.each { jar ->
+                new java.util.zip.ZipFile(jar).withCloseable { zip ->
+                    zip.entries().each { e ->
+                        if (e.name.endsWith(".class") && !e.name.contains('$')) {
+                            def cls = e.name.substring(0, e.name.length() - 6).replace('/', '.')
+                            if (pattern.matcher(cls).matches()) {
+                                found.add(cls + "   [" + jar.name + "]")
+                            }
+                        }
+                    }
+                }
+            }
+            println("APIDUMP find '$find' in $setName: ${found.size()} classes")
+            found.each { println("APIDUMP   " + it) }
+        }
+        def classes = project.findProperty("apiClasses")
+        if (classes) {
+            def javaHome = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(21) }.get()
+                    .metadata.installationPath.asFile
+            def javap = new File(javaHome, "bin/javap").absolutePath
+            def cp = jars.collect { it.absolutePath }.join(File.pathSeparator)
+            classes.toString().split(",").each { cls ->
+                def out = new ByteArrayOutputStream()
+                project.exec {
+                    commandLine javap, "-p", "-cp", cp, cls.trim()
+                    standardOutput = out
+                    errorOutput = out
+                    ignoreExitValue = true
+                }
+                println("APIDUMP ===== " + cls.trim())
+                out.toString("UTF-8").eachLine { println("APIDUMP " + it) }
+            }
+        }
+    }
+}

@@ -116,3 +116,5 @@ tasks.withType(JavaExec).configureEach {
         jvmArgs("-Dblendemotes.selftest=true", "-Dorg.lwjgl.opengl.Display.allowSoftwareOpenGL=true")
     }
 }
+
+apply from: rootProject.file("gradle/apidump.gradle")

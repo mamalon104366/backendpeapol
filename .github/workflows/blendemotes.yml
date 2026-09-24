@@ -15,9 +15,30 @@ defaults:
     working-directory: blendemotes
 
 jobs:
+  core:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: |
+            8
+            21
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: false
+      - name: Core tests
+        run: ./gradlew -PcoreOnly :core:check --stacktrace --console=plain
+
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        mc: [ "1.8.9", "1.20.1" ]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -30,20 +51,46 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           cache-read-only: false
-      - name: Core tests
-        run: ./gradlew -PcoreOnly :core:check --stacktrace --console=plain
-      - name: Build mods
-        run: ./gradlew build --console=plain --continue
-      - name: List run tasks
-        if: always()
-        run: ./gradlew :mc-1.8.9:tasks --all --console=plain | grep -i -E "^run|remap" || true
+      - name: Build mod jars
+        run: ./gradlew -PmcVersions=${{ matrix.mc }} build --console=plain --continue
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: jars
+          name: jars-${{ matrix.mc }}
           path: |
             blendemotes/versions/*/build/libs/*.jar
           if-no-files-found: ignore
+
+  # Development helper: prints Minecraft API signatures listed in blendemotes/ci/probe.txt
+  # (one Gradle invocation per line, e.g. ":mc-1.20.1:apiDump -PapiClasses=a.b.C").
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check for probe requests
+        id: check
+        run: |
+          if [ -s ci/probe.txt ]; then echo "run=true" >> "$GITHUB_OUTPUT"; else echo "run=false" >> "$GITHUB_OUTPUT"; fi
+      - uses: actions/setup-java@v4
+        if: steps.check.outputs.run == 'true'
+        with:
+          distribution: temurin
+          java-version: |
+            8
+            17
+            21
+      - uses: gradle/actions/setup-gradle@v4
+        if: steps.check.outputs.run == 'true'
+        with:
+          cache-read-only: false
+      - name: API dump
+        if: steps.check.outputs.run == 'true'
+        run: |
+          grep -v -E '^\s*(#|$)' ci/probe.txt | while IFS= read -r line; do
+            echo "APIDUMP >>>>> $line"
+            eval "./gradlew $line --console=plain -q" < /dev/null 2>&1 | grep -E "APIDUMP|error|Error|FAIL" | cut -c1-600 || true
+          done
 
   selftest:
     needs: build
