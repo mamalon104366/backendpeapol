@@ -1,0 +1,28 @@
+.logo {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+  color: var(--paper);
+}
+.logo__mark {
+  font-size: 1.9em;
+  filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.5));
+  transform: rotate(-6deg);
+}
+.logo__word {
+  font-family: var(--font-display);
+  font-size: 1.15em;
+  letter-spacing: 0.04em;
+  margin-top: 0.12em;
+}
+.logo__sub {
+  font-weight: 800;
+  font-size: 0.42em;
+  letter-spacing: 0.5em;
+  margin-right: -0.5em;
+  opacity: 0.8;
+}
+.logo--sm { font-size: 14px; }
+.logo--md { font-size: 20px; }
+.logo--lg { font-size: clamp(30px, 4vw, 44px); }
