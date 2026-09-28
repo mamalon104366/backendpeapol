@@ -36,6 +36,16 @@ Blender (emote_creator.blend)  ──export──►  emote.json  ──►  .mi
 * **Compatible** con los emotes de Emotecraft / PlayerAnimationLibrary (formato Bedrock con
   `player_animation_library`) y con el formato clásico `emote.json` de Emotecraft.
 
+## Instalar
+
+1. Instala el loader de tu versión: Fabric (con **Fabric API**; en 1.8.9 y 1.12.2, Legacy
+   Fabric con Legacy Fabric API), Forge o NeoForge.
+2. Copia en `.minecraft/mods/` el jar de tu versión y loader:
+   `blendemotes-mc<versión>-<mod>-<loader>.jar`, por ejemplo
+   `blendemotes-mc1.21.1-1.0.0-fabric.jar`. Los jars `-dev` y `-sources` no son para jugar.
+3. Para que otros jugadores vean tus emotes, instálalo también en el servidor (ver
+   [Multijugador](#multijugador)).
+
 ## Crear emotes en Blender
 
 1. Abre `emote_creator.blend` (Blender 5.2+, igual que el rig).
@@ -140,6 +150,8 @@ Los jars quedan en `versions/<versión>/build/libs/` (uno por loader).
 La integración continua (`.github/workflows/blendemotes.yml`) compila todo y además arranca
 Minecraft de verdad en una pantalla virtual para cada versión y loader, crea un mundo plano,
 reproduce los emotes incluidos y guarda capturas (se imprimen como hoja de contacto en el log).
+Lo hace dos veces: en el entorno de desarrollo y con los **jars finales** instalados en el
+loader real (HeadlessMC instala Fabric/Forge/NeoForge como un launcher y el jar va en `mods/`).
 
 ## Estructura
 
@@ -148,7 +160,7 @@ core/              núcleo sin Minecraft (Java 8): formato, curvas, rig, bends, 
   src/test/        tests, incluida la comparación contra Blender (tools/blender/*.py)
 shared/legacy/     código compartido 1.8.9–1.12.2 (nombres MCP)
 shared/modern/     código compartido 1.16.5+ (nombres de Mojang): main, fabric, forge, neoforge
-versions/<mc>/     un build.gradle por versión (versiones de los loaders y renombres)
+versions/<mc>/     un build.gradle por versión (versiones de los loaders)
 gradle/            lógica de build común y el preprocesador (preprocess.gradle)
 ci/                versiones de CI (targets.txt) y herramientas de consulta de API
 tools/blender/     exportador por lotes y generador de datos de referencia de Blender
