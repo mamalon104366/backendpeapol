@@ -38,6 +38,7 @@ jobs:
     outputs:
       versions: ${{ steps.plan.outputs.versions }}
       selftest: ${{ steps.plan.outputs.selftest }}
+      prod: ${{ steps.plan.outputs.prod }}
       probe: ${{ steps.plan.outputs.probe }}
     steps:
       - uses: actions/checkout@v4
@@ -191,4 +192,88 @@ jobs:
             blendemotes/selftest.log
             blendemotes/versions/${{ matrix.mc }}/run/**/screenshots/*.png
             blendemotes/versions/${{ matrix.mc }}/run/**/logs/latest.log
+          if-no-files-found: ignore
+
+  # The release jars (remapped to the names the real game uses) on the real loaders, installed
+  # by HeadlessMC like a launcher would: same self-test as above, without the development
+  # environment.
+  prod:
+    needs: [plan, build]
+    if: ${{ !cancelled() && needs.plan.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: .
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.prod) }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: jars-${{ matrix.mc }}
+          path: jars
+      - name: Stage the mod (and Fabric API)
+        run: |
+          mkdir -p run/mods
+          jar=$(find jars -name "blendemotes-mc${{ matrix.mc }}-*-${{ matrix.loader }}.jar" | head -1)
+          if [ -z "$jar" ]; then echo "no ${{ matrix.loader }} jar for ${{ matrix.mc }}"; find jars -name '*.jar'; exit 1; fi
+          echo "testing $jar"
+          cp "$jar" run/mods/
+          if [ "${{ matrix.loader }}" = "fabric" ] && [ -n "${{ matrix.fabricApi }}" ]; then
+            v="${{ matrix.fabricApi }}"
+            curl -sfL --retry 3 -o "run/mods/fabric-api-$v.jar" "https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/$v/fabric-api-$v.jar"
+          fi
+          ls -la run/mods
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+      - name: Install virtual display
+        run: sudo apt-get update -q && sudo apt-get install -y -q xvfb x11-xserver-utils libgl1-mesa-dri libglx-mesa0 libxrandr2 libxcursor1 libxi6 libxxf86vm1 libopenal1 imagemagick
+      - name: Run the game with the release jar
+        uses: headlesshq/mc-runtime-test@4.5.1
+        env:
+          LIBGL_ALWAYS_SOFTWARE: "1"
+          BLENDEMOTES_SELFTEST: "1"
+        with:
+          mc: ${{ matrix.mc }}
+          modloader: ${{ matrix.loader }}
+          regex: .*${{ matrix.loader }}.*
+          java: ${{ matrix.java }}
+          mc-runtime-test: none
+          dummy-assets: "false"
+          headlessmc-command: --jvm "-Djava.awt.headless=true -Dblendemotes.selftest=true"
+      - name: Check the self-test
+        if: always()
+        run: |
+          log=run/logs/latest.log
+          grep -E "selftest|BlendEmotes" "$log" | head -100 || true
+          echo "----- exceptions with context -----"
+          grep -n -B4 -A20 -E "Exception|FATAL|Mixin apply failed|InvalidInjection" "$log" | cut -c1-400 | head -300 || true
+          grep -q BLENDEMOTES_SELFTEST_DONE "$log"
+      - name: Contact sheet
+        if: always()
+        run: |
+          shots=$(find run -name 'blendemotes_*.png' 2>/dev/null | sort)
+          if [ -n "$shots" ]; then
+            i=0
+            for f in $shots; do
+              i=$((i+1))
+              convert "$f" -gravity center -crop 45%x85%+0+0 +repage -resize 220x220 "$(printf 'small_%02d' $i).jpg"
+            done
+            montage small_*.jpg -tile 5x -geometry +2+2 -quality 70 sheet.jpg
+            echo "SHEET_BEGIN"; base64 -w 120 sheet.jpg; echo "SHEET_END"
+          else
+            echo "no screenshots"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: prod-${{ matrix.mc }}-${{ matrix.loader }}
+          path: |
+            run/logs/latest.log
+            run/crash-reports/*
+            run/screenshots/*.png
           if-no-files-found: ignore
