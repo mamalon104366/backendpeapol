@@ -90,7 +90,7 @@ net.minecraft.client.multiplayer.ClientCommonPacketListenerImpl | send\(|handleC
 net.minecraft.client.renderer.texture.AbstractTexture | <init>|setFilter|getTexture|close|ampler
 net.minecraft.world.level.levelgen.presets.WorldPresets | FLAT|NORMAL|createNormalWorldDimensions|fromSettings
 net.minecraft.client.gui.GuiComponent | blit|fill\(|drawCenteredString|drawString
-com.mojang.blaze3d.systems.RenderSystem | setShaderTexture|enableBlend|disableBlend|setShaderColor|defaultBlendFunc|setShader\(
+com.mojang.blaze3d.systems.RenderSystem | setShaderTexture|enableBlend|disableBlend|setShaderColor|defaultBlendFunc|setShader\(|SamplerCache
 net.minecraft.client.renderer.texture.TextureManager | bind|register|release
 net.minecraft.client.renderer.texture.DynamicTexture | setFilter
 net.minecraft.world.entity.LivingEntity | isSleeping|isDeadOrDying|isFallFlying|hurtTime|isPassenger|getItemBySlot

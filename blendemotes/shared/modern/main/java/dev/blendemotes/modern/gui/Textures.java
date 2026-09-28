@@ -4,6 +4,10 @@ import com.mojang.blaze3d.platform.NativeImage;
 import dev.blendemotes.core.client.WheelImage;
 import dev.blendemotes.modern.Compat;
 import net.minecraft.client.Minecraft;
+//#if MC >= 12111
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.textures.FilterMode;
+//#endif
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.resources.ResourceLocation;
 
@@ -13,12 +17,18 @@ final class Textures {
     }
 
     static ResourceLocation register(String path, NativeImage image) {
-        //#if MC >= 12105
+        //#if MC >= 12111
+        // smooth scaling: textures pick their sampler since 1.21.11
+        DynamicTexture texture = new DynamicTexture(() -> "blendemotes:" + path, image) {
+            {
+                sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR);
+            }
+        };
+        //#elseif MC >= 12105
         DynamicTexture texture = new DynamicTexture(() -> "blendemotes:" + path, image);
+        texture.setFilter(true, false);
         //#else
         DynamicTexture texture = new DynamicTexture(image);
-        //#endif
-        //#if MC < 12111
         texture.setFilter(true, false);
         //#endif
         ResourceLocation id = Compat.id("blendemotes", path);

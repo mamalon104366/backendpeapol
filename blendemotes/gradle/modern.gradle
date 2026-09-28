@@ -29,7 +29,8 @@ ext.preprocessRenames = [
         [12111, "net.minecraft.client.renderer.RenderType", "net.minecraft.client.renderer.rendertype.RenderType"],
         [12111, "net.minecraft.world.level.GameRules", "net.minecraft.world.level.gamerules.GameRules"],
         [260100, "state.CameraRenderState", "state.level.CameraRenderState"],
-        [260100, "state/CameraRenderState", "state/level/CameraRenderState"]
+        [260100, "state/CameraRenderState", "state/level/CameraRenderState"],
+        [260300, "com.mojang.blaze3d.textures", "com.mojang.renderpearl.api.textures"]
 ] + (project.findProperty("extraRenames") ?: [])
 
 // Fabric API modules the mod uses (see fabric.mod.json), plus lifecycle events that the
