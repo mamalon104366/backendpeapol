@@ -50,6 +50,15 @@ public abstract class CapeLayerMixin {
     private final BendMesh.Output blendemotes$buffer = new BendMesh.Output();
 
     @Unique
+    private static RenderType blendemotes$entitySolid(ResourceLocation texture) {
+        //#if MC >= 12111
+        return RenderTypes.entitySolid(texture);
+        //#else
+        return RenderType.entitySolid(texture);
+        //#endif
+    }
+
+    @Unique
     private void blendemotes$draw(PoseStack poseStack, MultiBufferSource buffers, int light, PlayerPose pose,
                                   ResourceLocation texture) {
         poseStack.pushPose();
@@ -57,7 +66,7 @@ public abstract class CapeLayerMixin {
         PoseMath.mul(poseStack, pose.matrix(PlayerPart.CAPE).mul(Mat4.translation(pivot.x, pivot.y, pivot.z))
                 .mul(Mat4.rotationY(Math.PI)));
         double bend = ModernEmotes.bendsEnabled() ? -pose.bend(PlayerPart.CAPE) : 0;
-        VertexConsumer consumer = buffers.getBuffer(RenderType.entitySolid(texture));
+        VertexConsumer consumer = buffers.getBuffer(blendemotes$entitySolid(texture));
         MeshEmitter.emit(PartMeshes.cape().deform(bend, pose.joint(PlayerPart.CAPE), blendemotes$buffer),
                 poseStack.last(), consumer, light, OverlayTexture.NO_OVERLAY, 0xFFFFFFFF);
         poseStack.popPose();
@@ -90,18 +99,9 @@ public abstract class CapeLayerMixin {
                 .mul(Mat4.rotationY(Math.PI)));
         double bend = ModernEmotes.bendsEnabled() ? -pose.bend(PlayerPart.CAPE) : 0;
         final BendMesh.Output mesh = PartMeshes.cape().deform(bend, pose.joint(PlayerPart.CAPE), new BendMesh.Output());
-        collector.submitCustomGeometry(poseStack, entitySolid(texture),
+        collector.submitCustomGeometry(poseStack, blendemotes$entitySolid(texture),
                 (p, consumer) -> MeshEmitter.emit(mesh, p, consumer, light, OverlayTexture.NO_OVERLAY, 0xFFFFFFFF));
         poseStack.popPose();
-    }
-
-    @Unique
-    private static RenderType entitySolid(ResourceLocation texture) {
-        //#if MC >= 12111
-        return RenderTypes.entitySolid(texture);
-        //#else
-        return RenderType.entitySolid(texture);
-        //#endif
     }
     //#elseif MC >= 12102
     @Shadow

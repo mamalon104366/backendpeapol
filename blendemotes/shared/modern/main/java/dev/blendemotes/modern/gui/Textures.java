@@ -18,7 +18,9 @@ final class Textures {
         //#else
         DynamicTexture texture = new DynamicTexture(image);
         //#endif
+        //#if MC < 12111
         texture.setFilter(true, false);
+        //#endif
         ResourceLocation id = Compat.id("blendemotes", path);
         Minecraft.getInstance().getTextureManager().register(id, texture);
         return id;

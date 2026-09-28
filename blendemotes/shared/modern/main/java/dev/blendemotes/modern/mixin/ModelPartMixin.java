@@ -120,6 +120,7 @@ public abstract class ModelPartMixin implements BendablePart {
     }
     //#endif
 
+    //#if MC < 12109
     /** Armour and the second skin layer copy the pose of the base parts: copy the emote state too. */
     @Inject(method = "copyFrom", at = @At("TAIL"))
     private void blendemotes$copy(ModelPart other, CallbackInfo ci) {
@@ -133,4 +134,6 @@ public abstract class ModelPartMixin implements BendablePart {
         blendemotes$sy = s[1];
         blendemotes$sz = s[2];
     }
+    //#endif
+    // 1.21.9 and newer: armour is posed from the player's render state (HumanoidModelMixin)
 }

@@ -87,7 +87,7 @@ net.minecraft.server.network.ServerGamePacketListenerImpl | send\(|handleCustomP
 net.minecraft.server.network.ServerCommonPacketListenerImpl | send\(|handleCustomPayload
 net.minecraft.client.multiplayer.ClientPacketListener | send\(|handleCustomPayload
 net.minecraft.client.multiplayer.ClientCommonPacketListenerImpl | send\(|handleCustomPayload
-net.minecraft.client.renderer.texture.AbstractTexture | <init>|setFilter|getTexture|close
+net.minecraft.client.renderer.texture.AbstractTexture | <init>|setFilter|getTexture|close|ampler
 net.minecraft.world.level.levelgen.presets.WorldPresets | FLAT|NORMAL|createNormalWorldDimensions|fromSettings
 net.minecraft.client.gui.GuiComponent | blit|fill\(|drawCenteredString|drawString
 com.mojang.blaze3d.systems.RenderSystem | setShaderTexture|enableBlend|disableBlend|setShaderColor|defaultBlendFunc|setShader\(
@@ -171,3 +171,6 @@ net.minecraftforge.fml.loading.FMLEnvironment
 @set neoforge
 net.neoforged.fml.loading.FMLEnvironment
 net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent
+com.mojang.blaze3d.systems.SamplerCache
+com.mojang.blaze3d.textures.FilterMode
+net.minecraft.client.gui.screens.TitleScreen | <init>

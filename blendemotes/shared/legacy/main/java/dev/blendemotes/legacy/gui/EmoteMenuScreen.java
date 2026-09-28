@@ -155,28 +155,12 @@ public class EmoteMenuScreen extends GuiScreen {
                 }
             }
         }
-        //#if MC >= 11202
-        try {
-            super.mouseClicked(mouseX, mouseY, mouseButton);
-        } catch (java.io.IOException ignored) {
-            // not thrown by the vanilla screen code
-        }
-        //#else
         super.mouseClicked(mouseX, mouseY, mouseButton);
-        //#endif
     }
 
     @Override
     public void handleMouseInput() {
-        //#if MC >= 11202
-        try {
-            super.handleMouseInput();
-        } catch (java.io.IOException ignored) {
-            // not thrown by the vanilla screen code
-        }
-        //#else
         super.handleMouseInput();
-        //#endif
         int wheel = Mouse.getEventDWheel();
         if (wheel != 0) {
             page += wheel > 0 ? -1 : 1;

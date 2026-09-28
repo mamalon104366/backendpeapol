@@ -11,6 +11,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 import java.util.function.Consumer;
 //#if MC >= 12005
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
+import net.neoforged.neoforge.network.handling.IPayloadHandler;
 //#else
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.loading.FMLEnvironment;
@@ -54,7 +55,7 @@ public class BlendEmotesNeoForge {
 
     //#if MC >= 12005
     private static void onRegisterPayloads(RegisterPayloadHandlersEvent event) {
-        event.registrar("1").optional().playBidirectional(EmotePayload.TYPE, EmotePayload.CODEC, (payload, context) -> {
+        IPayloadHandler<EmotePayload> handler = (payload, context) -> {
             if (context.flow() == PacketFlow.SERVERBOUND) {
                 if (context.player() instanceof ServerPlayer) {
                     ServerPlayer player = (ServerPlayer) context.player();
@@ -63,7 +64,13 @@ public class BlendEmotesNeoForge {
             } else {
                 context.enqueueWork(() -> toClient(payload.data()));
             }
-        });
+        };
+        //#if MC >= 12106
+        // the client side handler is registered separately (the handler checks the direction)
+        event.registrar("1").optional().playBidirectional(EmotePayload.TYPE, EmotePayload.CODEC, handler, handler);
+        //#else
+        event.registrar("1").optional().playBidirectional(EmotePayload.TYPE, EmotePayload.CODEC, handler);
+        //#endif
     }
     //#else
     private static void onRegisterPayloads(RegisterPayloadHandlerEvent event) {

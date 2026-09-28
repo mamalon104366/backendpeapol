@@ -68,7 +68,10 @@ final class SelfTest {
         }
         switch (state) {
             case 0:
-                if (timer > 100 && mc.level == null) {
+                if (mc.getOverlay() != null) {
+                    // still loading resources: starting a world now races the reload
+                    timer = 0;
+                } else if (timer > 100 && mc.level == null) {
                     ModernEmotes.LOGGER.info("[selftest] creating world");
                     createFlatWorld(mc, "blendemotes_selftest");
                     next();

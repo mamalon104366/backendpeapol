@@ -20,6 +20,18 @@
 
 ext.sharedRoot = rootProject.file("shared/modern")
 
+// Classes Mojang renamed or moved: [first version, old name, new name], whole words in the active
+// code (see gradle/preprocess.gradle). A module can add its own with `extraRenames`.
+ext.preprocessRenames = [
+        [12111, "ResourceLocation", "Identifier"],
+        [12111, "net.minecraft.Util", "net.minecraft.util.Util"],
+        [12111, "net.minecraft.client.model.PlayerModel", "net.minecraft.client.model.player.PlayerModel"],
+        [12111, "net.minecraft.client.renderer.RenderType", "net.minecraft.client.renderer.rendertype.RenderType"],
+        [12111, "net.minecraft.world.level.GameRules", "net.minecraft.world.level.gamerules.GameRules"],
+        [260100, "state.CameraRenderState", "state.level.CameraRenderState"],
+        [260100, "state/CameraRenderState", "state/level/CameraRenderState"]
+] + (project.findProperty("extraRenames") ?: [])
+
 // Fabric API modules the mod uses (see fabric.mod.json), plus lifecycle events that the
 // networking module needs at runtime in some versions.
 ext.FABRIC_API_MODULES = ["fabric-api-base", "fabric-networking-api-v1", "fabric-key-binding-api-v1",
@@ -94,6 +106,21 @@ if (loaders.contains("fabric")) {
         fabric {
             loader project.fabricLoader
         }
+        if (obfuscated && (project.mcVersion as int) >= 12105) {
+            // Newer Fabric API jars have no mixin refmaps (their mixins name the intermediary
+            // members directly), so the development copies remapped to Mojang names need their
+            // mixin targets remapped too.
+            mods {
+                modImplementation {
+                    mixinRemap {
+                        reset()
+                        enableBaseMixin()
+                        enableMixinExtra()
+                        disableRefmap()
+                    }
+                }
+            }
+        }
         defaultRemapJar = true
     }
 }
@@ -104,8 +131,22 @@ if (loaders.contains("forge")) {
         minecraftForge {
             loader project.forge
             mixinConfig "blendemotes.mixins.json"
+            // Forge's own bootstrap (1.20.3+) already merges the MOD_CLASSES folders of a mod;
+            // Unimined's relauncher breaks it (no jdk.zipfs, unnamed modules).
+            useUnionRelaunch = false
         }
         defaultRemapJar = true
+    }
+    if ((project.mcVersion as int) < 11700) {
+        // Forge 1.16.5 only reads mods.toml from the first folder of the mod: the Forge resources
+        tasks.matching { it.name == "forgeRunClient" || it.name == "forgeRunServer" }.configureEach { JavaExec t ->
+            t.doFirst {
+                def forge = sourceSets.forge.output
+                def main = sourceSets.main.output
+                def dirs = [forge.resourcesDir] + forge.classesDirs.files + [main.resourcesDir] + main.classesDirs.files
+                t.environment("MOD_CLASSES", dirs.collect { "blendemotes%%" + it.absolutePath }.join(File.pathSeparator))
+            }
+        }
     }
 }
 

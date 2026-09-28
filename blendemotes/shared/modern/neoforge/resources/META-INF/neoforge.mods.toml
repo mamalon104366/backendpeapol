@@ -15,11 +15,7 @@ config="blendemotes.mixins.json"
 
 [[dependencies.blendemotes]]
 modId="minecraft"
-//#if MC >= 12005
 type="required"
-//#else
-mandatory=true
-//#endif
 versionRange="${mcRange}"
 ordering="NONE"
 side="BOTH"
