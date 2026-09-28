@@ -54,7 +54,7 @@ final class SelfTest {
         timer++;
         total++;
         if (total % 200 == 0) {
-            ModernEmotes.LOGGER.info("[selftest] progress: state " + state + ", timer " + timer + ", screen " + mc.screen);
+            ModernEmotes.LOGGER.info("[selftest] progress: state " + state + ", timer " + timer + ", screen " + Compat.screen(mc));
         }
         if (total > 20 * 60 * 10 && state < 4) {
             ModernEmotes.LOGGER.error("[selftest] BLENDEMOTES_SELFTEST_TIMEOUT in state " + state);
@@ -62,13 +62,13 @@ final class SelfTest {
             mc.stop();
             return;
         }
-        if (state >= 1 && state <= 3 && mc.level != null && mc.screen != null) {
+        if (state >= 1 && state <= 3 && mc.level != null && Compat.screen(mc) != null) {
             // the virtual display has no focus: the game keeps opening the pause menu
-            mc.setScreen(null);
+            Compat.setScreen(mc, null);
         }
         switch (state) {
             case 0:
-                if (mc.getOverlay() != null) {
+                if (Compat.loading(mc)) {
                     // still loading resources: starting a world now races the reload
                     timer = 0;
                 } else if (timer > 100 && mc.level == null) {
@@ -79,11 +79,14 @@ final class SelfTest {
                 break;
             case 1:
                 if (mc.player != null && mc.level != null && timer > 100) {
+                    //#if MC < 260100
+                    // noon (26.1 replaced the day time with world clocks; a new world starts at sunrise)
                     if (mc.getSingleplayerServer() != null) {
                         mc.getSingleplayerServer().overworld().setDayTime(6000);
                     }
+                    //#endif
                     mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT);
-                    mc.options.hideGui = true;
+                    Compat.hideHud(mc);
                     //#if MC >= 11700
                     mc.player.setYRot(0);
                     mc.player.setXRot(10);
@@ -139,18 +142,25 @@ final class SelfTest {
 
     /** A superflat creative world, with the API of each version. */
     private static void createFlatWorld(Minecraft mc, String name) {
-        //#if MC >= 12102
+        //#if MC >= 260100
+        // the game rules are no longer part of the level settings
+        LevelSettings settings = new LevelSettings(name, GameType.CREATIVE,
+                new LevelSettings.DifficultySettings(Difficulty.PEACEFUL, false, false), true, WorldDataConfiguration.DEFAULT);
+        mc.createWorldOpenFlows().createFreshLevel(name, settings, new WorldOptions(1L, false, false),
+                registries -> registries.lookupOrThrow(Registries.WORLD_PRESET).getOrThrow(WorldPresets.FLAT).value()
+                        .createWorldDimensions(), Compat.screen(mc));
+        //#elseif MC >= 12102
         LevelSettings settings = new LevelSettings(name, GameType.CREATIVE, false, Difficulty.PEACEFUL, true,
                 new GameRules(WorldDataConfiguration.DEFAULT.enabledFeatures()), WorldDataConfiguration.DEFAULT);
         mc.createWorldOpenFlows().createFreshLevel(name, settings, new WorldOptions(1L, false, false),
                 registries -> registries.lookupOrThrow(Registries.WORLD_PRESET).getOrThrow(WorldPresets.FLAT).value()
-                        .createWorldDimensions(), mc.screen);
+                        .createWorldDimensions(), Compat.screen(mc));
         //#elseif MC >= 12002
         LevelSettings settings = new LevelSettings(name, GameType.CREATIVE, false, Difficulty.PEACEFUL, true,
                 new GameRules(), WorldDataConfiguration.DEFAULT);
         mc.createWorldOpenFlows().createFreshLevel(name, settings, new WorldOptions(1L, false, false),
                 registries -> registries.registryOrThrow(Registries.WORLD_PRESET).getHolderOrThrow(WorldPresets.FLAT).value()
-                        .createWorldDimensions(), mc.screen);
+                        .createWorldDimensions(), Compat.screen(mc));
         //#elseif MC >= 11903
         LevelSettings settings = new LevelSettings(name, GameType.CREATIVE, false, Difficulty.PEACEFUL, true,
                 new GameRules(), WorldDataConfiguration.DEFAULT);
@@ -182,12 +192,12 @@ final class SelfTest {
     private static void shot(Minecraft mc, String name) {
         String file = "blendemotes_" + name + ".png";
         //#if MC >= 12106
-        Screenshot.grab(mc.gameDirectory, file, mc.getMainRenderTarget(), 1, msg -> { });
+        Screenshot.grab(mc.gameDirectory, file, Compat.mainRenderTarget(mc), 1, msg -> { });
         //#elseif MC >= 11700
-        Screenshot.grab(mc.gameDirectory, file, mc.getMainRenderTarget(), msg -> { });
+        Screenshot.grab(mc.gameDirectory, file, Compat.mainRenderTarget(mc), msg -> { });
         //#else
         Screenshot.grab(mc.gameDirectory, file, mc.getWindow().getWidth(), mc.getWindow().getHeight(),
-                mc.getMainRenderTarget(), msg -> { });
+                Compat.mainRenderTarget(mc), msg -> { });
         //#endif
         PlayerPose pose = ModernEmotes.client().pose(mc.player.getUUID(), new VanillaPose(), false, 0, new PlayerPose());
         if (pose != null) {

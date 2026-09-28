@@ -39,7 +39,9 @@ final class ClientForge {
     }
 
     static void init(EventNetworkChannel channel) {
-        //#if MC >= 12106
+        //#if MC >= 260100
+        RegisterKeyMappingsEvent.BUS.addListener(ClientForge::onKeys);
+        //#elseif MC >= 12106
         RegisterKeyMappingsEvent.getBus(FMLJavaModLoadingContext.get().getModBusGroup()).addListener(ClientForge::onKeys);
         //#elseif MC >= 11900
         FMLJavaModLoadingContext.get().getModEventBus().addListener(ClientForge::onKeys);

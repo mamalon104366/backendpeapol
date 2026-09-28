@@ -174,3 +174,8 @@ net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent
 com.mojang.blaze3d.systems.SamplerCache
 com.mojang.blaze3d.textures.FilterMode
 net.minecraft.client.gui.screens.TitleScreen | <init>
+net.minecraft.client.gui.Gui | screen|Screen|overlay|Overlay|hud|Hud|<init>|public
+net.minecraft.client.gui.Hud | idden|hide|Hide|toggle
+net.minecraft.client.renderer.GameRenderer | mainRenderTarget|MainRenderTarget
+net.minecraft.client.Minecraft | gui|gameRenderer|getGameRenderer|renderFrame
+net.minecraft.client.gui.render.state.GuiRenderState | HudHidden|hudHidden

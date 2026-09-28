@@ -15,8 +15,13 @@ public class BlendEmotesFabric implements ModInitializer {
     @Override
     public void onInitialize() {
         //#if MC >= 12005
+        //#if MC >= 260100
+        PayloadTypeRegistry.serverboundPlay().register(EmotePayload.TYPE, EmotePayload.CODEC);
+        PayloadTypeRegistry.clientboundPlay().register(EmotePayload.TYPE, EmotePayload.CODEC);
+        //#else
         PayloadTypeRegistry.playC2S().register(EmotePayload.TYPE, EmotePayload.CODEC);
         PayloadTypeRegistry.playS2C().register(EmotePayload.TYPE, EmotePayload.CODEC);
+        //#endif
         ServerRelay.setSender((player, payload) -> {
             if (ServerPlayNetworking.canSend(player, EmotePayload.TYPE)) {
                 ServerPlayNetworking.send(player, new EmotePayload(payload));

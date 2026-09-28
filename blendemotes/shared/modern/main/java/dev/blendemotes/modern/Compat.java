@@ -1,6 +1,8 @@
 package dev.blendemotes.modern;
 
+import com.mojang.blaze3d.pipeline.RenderTarget;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
@@ -83,6 +85,50 @@ public final class Compat {
         return player.getSkin().model() == PlayerSkin.Model.SLIM;
         //#else
         return "slim".equals(player.getModelName());
+        //#endif
+    }
+
+    // 26.2 moved the screen, the loading overlay and the main render target out of Minecraft
+
+    public static Screen screen(Minecraft mc) {
+        //#if MC >= 260200
+        return mc.gui.screen();
+        //#else
+        return mc.screen;
+        //#endif
+    }
+
+    public static void setScreen(Minecraft mc, Screen screen) {
+        //#if MC >= 260200
+        mc.gui.setScreen(screen);
+        //#else
+        mc.setScreen(screen);
+        //#endif
+    }
+
+    /** True while the resources (re)load behind the loading overlay. */
+    public static boolean loading(Minecraft mc) {
+        //#if MC >= 260200
+        return mc.gui.overlay() != null;
+        //#else
+        return mc.getOverlay() != null;
+        //#endif
+    }
+
+    public static RenderTarget mainRenderTarget(Minecraft mc) {
+        //#if MC >= 260200
+        return mc.gameRenderer.mainRenderTarget();
+        //#else
+        return mc.getMainRenderTarget();
+        //#endif
+    }
+
+    /** Hides the HUD (hotbar, crosshair) like F1. */
+    public static void hideHud(Minecraft mc) {
+        //#if MC >= 260200
+        mc.gui.hud.setHidden(true);
+        //#else
+        mc.options.hideGui = true;
         //#endif
     }
 }

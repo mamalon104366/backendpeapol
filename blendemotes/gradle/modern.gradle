@@ -53,10 +53,14 @@ java {
     }
 }
 
+// Bytecode level of the mod. 26.x runs on Java 25 but the mod stays at Java 21 bytecode, the
+// highest mixin compatibility level every loader's Mixin knows.
+int javaRelease = Math.min(project.javaVersion as int, 21)
+
 tasks.withType(JavaCompile).configureEach {
     options.encoding = "UTF-8"
     if ((project.javaVersion as int) > 8) {
-        options.release = project.javaVersion as int // javac 8 has no --release
+        options.release = javaRelease // javac 8 has no --release
     }
 }
 
@@ -136,6 +140,15 @@ if (loaders.contains("forge")) {
             useUnionRelaunch = false
         }
         defaultRemapJar = true
+    }
+    if ((project.mcVersion as int) >= 12003) {
+        // Forge's bootstrap also loads the classpath folders one by one, as automatic modules named
+        // after the folder: a folder called "forge" clashes with Forge's own module.
+        sourceSets.forge.java.destinationDirectory.set(layout.buildDirectory.dir("classes/java/forgeMod"))
+        sourceSets.forge.output.resourcesDir = layout.buildDirectory.dir("resources/forgeMod").get().asFile
+        tasks.matching { it.name == "forgeRunClient" && project.hasProperty("selftest") }.configureEach {
+            jvmArgs("-Dbsl.debug=true")
+        }
     }
     if ((project.mcVersion as int) < 11700) {
         // Forge 1.16.5 only reads mods.toml from the first folder of the mod: the Forge resources
@@ -218,7 +231,7 @@ def resourceProps = [
         mcRange    : (project.findProperty("mcRange") ?: "[${project.minecraft}]").toString(),
         fabricMc   : (project.findProperty("fabricMc") ?: project.minecraft).toString(),
         java       : javaLevel.toString(),
-        javaMixin  : javaLevel >= 21 ? "JAVA_21" : (javaLevel >= 17 ? "JAVA_17" : "JAVA_8"),
+        javaMixin  : javaRelease >= 21 ? "JAVA_21" : (javaRelease >= 17 ? "JAVA_17" : "JAVA_8"),
         forgeMajor : (project.findProperty("forge") ?: "0").toString().tokenize(".")[0],
         neoRange   : (project.findProperty("neoRange") ?: "[1,)").toString(),
         // resource pack format of the mod's pack.mcmeta (only Forge up to 1.20.1 ships the file)

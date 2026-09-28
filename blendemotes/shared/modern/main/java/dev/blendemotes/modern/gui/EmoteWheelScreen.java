@@ -102,7 +102,7 @@ public class EmoteWheelScreen extends BaseScreen {
         done = true;
         ClientEmotes client = ModernEmotes.client();
         Emote e = hovered >= 0 && client != null ? client.wheelEmote(hovered) : null;
-        minecraft.setScreen(null);
+        Compat.setScreen(minecraft, null);
         if (e != null) {
             client.playLocal(e);
         }
@@ -116,7 +116,7 @@ public class EmoteWheelScreen extends BaseScreen {
         }
         if (button == 1) {
             done = true;
-            minecraft.setScreen(new EmoteMenuScreen(null));
+            Compat.setScreen(minecraft, new EmoteMenuScreen(null));
             return true;
         }
         return false;
@@ -126,7 +126,7 @@ public class EmoteWheelScreen extends BaseScreen {
     protected boolean key(int keyCode) {
         if (keyCode == GLFW.GLFW_KEY_TAB) {
             done = true;
-            minecraft.setScreen(new EmoteMenuScreen(null));
+            Compat.setScreen(minecraft, new EmoteMenuScreen(null));
             return true;
         }
         return false;

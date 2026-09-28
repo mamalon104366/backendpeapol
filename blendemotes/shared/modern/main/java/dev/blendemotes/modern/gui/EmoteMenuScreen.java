@@ -121,7 +121,7 @@ public class EmoteMenuScreen extends BaseScreen {
     }
 
     private void play(Emote e) {
-        minecraft.setScreen(null);
+        Compat.setScreen(minecraft, null);
         client().playLocal(e);
     }
 
@@ -148,7 +148,7 @@ public class EmoteMenuScreen extends BaseScreen {
 
     @Override
     public void onClose() {
-        minecraft.setScreen(parent);
+        Compat.setScreen(minecraft, parent);
     }
 
     @Override

@@ -157,16 +157,16 @@ public final class ModernEmotes {
             INPUT.hurt = player.hurtTime > 0;
             INPUT.blocked = player.isPassenger() || player.isSleeping() || player.isDeadOrDying() || player.isFallFlying();
         }
-        client.tick(player != null && mc.screen == null ? INPUT : null);
+        client.tick(player != null && Compat.screen(mc) == null ? INPUT : null);
 
         while (KEY_WHEEL.consumeClick()) {
-            if (mc.screen == null && player != null) {
-                mc.setScreen(new EmoteWheelScreen(KEY_WHEEL));
+            if (Compat.screen(mc) == null && player != null) {
+                Compat.setScreen(mc, new EmoteWheelScreen(KEY_WHEEL));
             }
         }
         while (KEY_MENU.consumeClick()) {
-            if (mc.screen == null && player != null) {
-                mc.setScreen(new EmoteMenuScreen(null));
+            if (Compat.screen(mc) == null && player != null) {
+                Compat.setScreen(mc, new EmoteMenuScreen(null));
             }
         }
         while (KEY_STOP.consumeClick()) {

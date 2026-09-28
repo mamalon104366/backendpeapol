@@ -12,7 +12,9 @@ import dev.blendemotes.modern.render.MeshEmitter;
 import dev.blendemotes.modern.render.PartMeshes;
 import dev.blendemotes.modern.render.PoseMath;
 import dev.blendemotes.modern.render.RenderContext;
+//#if MC < 12109
 import net.minecraft.client.renderer.MultiBufferSource;
+//#endif
 import net.minecraft.client.renderer.RenderType;
 //#if MC >= 12111
 import net.minecraft.client.renderer.rendertype.RenderTypes;
@@ -58,6 +60,7 @@ public abstract class CapeLayerMixin {
         //#endif
     }
 
+    //#if MC < 12109
     @Unique
     private void blendemotes$draw(PoseStack poseStack, MultiBufferSource buffers, int light, PlayerPose pose,
                                   ResourceLocation texture) {
@@ -71,6 +74,7 @@ public abstract class CapeLayerMixin {
                 poseStack.last(), consumer, light, OverlayTexture.NO_OVERLAY, 0xFFFFFFFF);
         poseStack.popPose();
     }
+    //#endif
 
     //#if MC >= 12109
     @Shadow

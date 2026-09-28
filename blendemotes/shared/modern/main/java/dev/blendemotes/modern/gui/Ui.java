@@ -3,7 +3,10 @@ package dev.blendemotes.modern.gui;
 import net.minecraft.client.gui.Font;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-//#if MC >= 12106
+//#if MC >= 260100
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.renderer.RenderPipelines;
+//#elseif MC >= 12106
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderPipelines;
 //#elseif MC >= 12102
@@ -23,7 +26,13 @@ import net.minecraft.client.Minecraft;
 
 /** The drawing calls the emote screens need, for every GUI API since 1.16. Colours are ARGB. */
 public final class Ui {
-    //#if MC >= 12000
+    //#if MC >= 260100
+    private final GuiGraphicsExtractor g;
+
+    Ui(GuiGraphicsExtractor g) {
+        this.g = g;
+    }
+    //#elseif MC >= 12000
     private final GuiGraphics g;
 
     Ui(GuiGraphics g) {
@@ -38,7 +47,9 @@ public final class Ui {
     //#endif
 
     public void centered(Font font, String text, int x, int y, int argb) {
-        //#if MC >= 12000
+        //#if MC >= 260100
+        g.centeredText(font, text, x, y, argb);
+        //#elseif MC >= 12000
         g.drawCenteredString(font, text, x, y, argb);
         //#else
         GuiComponent.drawCenteredString(pose, font, text, x, y, argb);
@@ -46,7 +57,9 @@ public final class Ui {
     }
 
     public void centered(Font font, Component text, int x, int y, int argb) {
-        //#if MC >= 12000
+        //#if MC >= 260100
+        g.centeredText(font, text, x, y, argb);
+        //#elseif MC >= 12000
         g.drawCenteredString(font, text, x, y, argb);
         //#else
         GuiComponent.drawCenteredString(pose, font, text, x, y, argb);

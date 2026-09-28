@@ -7,7 +7,9 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 //#endif
-//#if MC >= 12000
+//#if MC >= 260100
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+//#elseif MC >= 12000
 import net.minecraft.client.gui.GuiGraphics;
 //#else
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -63,7 +65,20 @@ abstract class BaseScreen extends Screen {
         //#endif
     }
 
-    //#if MC >= 12000
+    //#if MC >= 260100
+    @Override
+    public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
+        super.extractRenderState(g, mouseX, mouseY, partialTick);
+        draw(new Ui(g), mouseX, mouseY, partialTick);
+    }
+
+    @Override
+    public void extractBackground(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
+        if (background()) {
+            super.extractBackground(g, mouseX, mouseY, partialTick);
+        }
+    }
+    //#elseif MC >= 12000
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         //#if MC < 12002
