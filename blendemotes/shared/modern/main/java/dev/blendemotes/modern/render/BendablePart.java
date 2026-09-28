@@ -11,7 +11,7 @@ public interface BendablePart {
     BendMesh blendemotes$mesh();
 
     /** Emote state for this frame. */
-    void blendemotes$setEmote(boolean active, double bend, Vec3 joint, float sx, float sy, float sz);
+    void blendemotes$setEmote(boolean active, Vec3 bend, Vec3 joint, float sx, float sy, float sz);
 
     boolean blendemotes$active();
 
@@ -20,7 +20,8 @@ public interface BendablePart {
 
     void blendemotes$clear();
 
-    double blendemotes$bend();
+    /** Bend as a rotation vector (radians, part-local): X forwards/backwards, Z sideways. */
+    Vec3 blendemotes$bend();
 
     Vec3 blendemotes$joint();
 

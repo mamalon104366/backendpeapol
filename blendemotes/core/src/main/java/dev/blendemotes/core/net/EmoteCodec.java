@@ -3,6 +3,7 @@ package dev.blendemotes.core.net;
 import dev.blendemotes.core.anim.Animation;
 import dev.blendemotes.core.anim.BoneAnimation;
 import dev.blendemotes.core.anim.Easing;
+import dev.blendemotes.core.anim.EmoteModel;
 import dev.blendemotes.core.anim.Keyframe;
 import dev.blendemotes.core.anim.LoopMode;
 import dev.blendemotes.core.anim.Track;
@@ -31,9 +32,11 @@ import java.util.zip.Inflater;
  * unbounded memory.
  */
 public final class EmoteCodec {
-    public static final int FORMAT = 1;
-    /** Upper bound of the decompressed size. */
-    public static final int MAX_RAW_BYTES = 2 * 1024 * 1024;
+    /** 2: bends in every direction (twist and sideways tracks) and models. 1 is still read. */
+    public static final int FORMAT = 2;
+    /** Upper bound of the decompressed size (models with their textures included). */
+    public static final int MAX_RAW_BYTES = 12 * 1024 * 1024;
+    public static final int MAX_MODELS = 32;
     public static final int MAX_BONES = 128;
     public static final int MAX_KEYS = 20000;
     public static final int MAX_STRING = 1024;
@@ -63,12 +66,12 @@ public final class EmoteCodec {
         byte[] raw = inflate(data, MAX_RAW_BYTES);
         DataInputStream in = new DataInputStream(new ByteArrayInputStream(raw));
         int format = in.readUnsignedByte();
-        if (format != FORMAT) {
+        if (format != 1 && format != FORMAT) {
             throw new IOException("unsupported emote data format " + format);
         }
         UUID id = new UUID(in.readLong(), in.readLong());
         EmoteInfo info = readInfo(in);
-        Animation animation = readAnimation(in);
+        Animation animation = readAnimation(in, format);
         return new Emote(id, info, animation, source);
     }
 
@@ -146,10 +149,70 @@ public final class EmoteCodec {
                 writeTrack(out, b.scale[i]);
             }
             writeTrack(out, b.bend);
+            writeTrack(out, b.bendAxes[BoneAnimation.Y]);
+            writeTrack(out, b.bendAxes[BoneAnimation.Z]);
+        }
+        out.writeShort(Math.min(a.models.size(), MAX_MODELS));
+        for (int i = 0; i < a.models.size() && i < MAX_MODELS; i++) {
+            writeModel(out, a.models.get(i));
         }
     }
 
-    private static Animation readAnimation(DataInputStream in) throws IOException {
+    private static void writeModel(DataOutputStream out, EmoteModel m) throws IOException {
+        writeString(out, m.name);
+        writeString(out, m.bone);
+        out.writeBoolean(m.doubleSided);
+        out.writeInt(m.triangleCount());
+        for (float f : m.positions) {
+            out.writeFloat(f);
+        }
+        for (float f : m.uvs) {
+            out.writeFloat(f);
+        }
+        for (float f : m.normals) {
+            out.writeFloat(f);
+        }
+        out.writeInt(m.texture.length);
+        out.write(m.texture);
+    }
+
+    private static EmoteModel readModel(DataInputStream in) throws IOException {
+        String name = readString(in);
+        String bone = readString(in);
+        boolean doubleSided = in.readBoolean();
+        int triangles = in.readInt();
+        if (triangles < 0 || triangles > EmoteModel.MAX_TRIANGLES) {
+            throw new IOException("bad model size");
+        }
+        float[] positions = readFloats(in, triangles * 9);
+        float[] uvs = readFloats(in, triangles * 6);
+        float[] normals = readFloats(in, triangles * 9);
+        int textureLength = in.readInt();
+        if (textureLength <= 0 || textureLength > EmoteModel.MAX_TEXTURE_BYTES) {
+            throw new IOException("bad model texture");
+        }
+        byte[] texture = new byte[textureLength];
+        in.readFully(texture);
+        try {
+            return new EmoteModel(name, bone, positions, uvs, normals, texture, doubleSided);
+        } catch (IllegalArgumentException ex) {
+            throw new IOException(ex.getMessage());
+        }
+    }
+
+    private static float[] readFloats(DataInputStream in, int n) throws IOException {
+        float[] r = new float[n];
+        for (int i = 0; i < n; i++) {
+            float f = in.readFloat();
+            if (Float.isNaN(f) || Float.isInfinite(f)) {
+                throw new IOException("bad number");
+            }
+            r[i] = f;
+        }
+        return r;
+    }
+
+    private static Animation readAnimation(DataInputStream in, int format) throws IOException {
         double length = finite(in.readDouble());
         int loop = in.readUnsignedByte();
         if (loop >= LoopMode.values().length) {
@@ -186,9 +249,21 @@ public final class EmoteCodec {
             Track[] rot = {readTrack(in, budget), readTrack(in, budget), readTrack(in, budget)};
             Track[] scale = {readTrack(in, budget), readTrack(in, budget), readTrack(in, budget)};
             Track bend = readTrack(in, budget);
-            bones.put(name, new BoneAnimation(pos, rot, scale, bend));
+            Track bendTwist = format >= 2 ? readTrack(in, budget) : null;
+            Track bendSide = format >= 2 ? readTrack(in, budget) : null;
+            bones.put(name, new BoneAnimation(pos, rot, scale, bend, bendTwist, bendSide));
         }
-        return new Animation(length, LoopMode.values()[loop], loopStart, bones, pivots, parents, applyBend, blenderRig);
+        List<EmoteModel> models = new ArrayList<EmoteModel>();
+        if (format >= 2) {
+            int modelCount = in.readUnsignedShort();
+            if (modelCount > MAX_MODELS) {
+                throw new IOException("too many models");
+            }
+            for (int i = 0; i < modelCount; i++) {
+                models.add(readModel(in));
+            }
+        }
+        return new Animation(length, LoopMode.values()[loop], loopStart, bones, pivots, parents, applyBend, blenderRig, models);
     }
 
     private static final int F_EXPR = 1;

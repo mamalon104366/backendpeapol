@@ -28,7 +28,15 @@ Blender (emote_creator.blend)  ──export──►  emote.json  ──►  .mi
   Armature con **Preserve Volume**, es decir dual quaternion, y los pesos medidos en la malla).
   Los tests automáticos comparan el mod contra Blender:
   * huesos: error máximo **0.005 píxeles** en `cartwheel` e `inchworm`;
-  * malla doblada (codos, rodillas, torso): error máximo **0.04 píxeles**.
+  * malla doblada (codos, rodillas, torso): error máximo **0.04 píxeles**;
+  * codos y rodillas doblados hacia los lados y el micrófono del ejemplo `cantar`: error
+    máximo **0.006 píxeles**.
+* **Codos y rodillas en todas las direcciones.** El antebrazo y la parte baja de la pierna se
+  doblan hacia delante y hacia atrás **y hacia los lados** (el hueso `*_bend` gira en X y en Z).
+* **Modelos en los emotes.** Un emote puede llevar modelos 3D propios (un micrófono, una
+  guitarra, un caballo...) enganchados a cualquier hueso del rig o a huesos nuevos que añadas;
+  viajan dentro del `.json` (geometría y textura) y se ven en todas las versiones y en
+  multijugador.
 * **Corrige los fallos del exportador del rig.** El script que trae el `.blend` escribe mal los
   manejadores Bézier de algunos ejes (no aplica el signo del eje), deja los del canal `bend` en
   radianes y redondea los tiempos a 3 decimales. El mod lo detecta y lo corrige al cargar el
@@ -48,7 +56,17 @@ Blender (emote_creator.blend)  ──export──►  emote.json  ──►  .mi
 
 ## Crear emotes en Blender
 
-1. Abre `emote_creator.blend` (Blender 5.2+, igual que el rig).
+0. Una vez: actualiza el rig (se guarda un `.blend` nuevo, el original no se toca):
+
+   ```bash
+   blender -b emote_creator.blend -P tools/blender/upgrade_rig.py -- --out emote_creator_blendemotes.blend
+   ```
+
+   Desbloquea el eje Z de `left/right_arm_bend` y `left/right_leg_bend` (doblez lateral), pone
+   el exportador nuevo en el botón **Export** del rig, añade el campo **Modelos** al panel de
+   la acción y trae el ejemplo `cantar` (micrófono en la mano, codo y rodilla hacia los lados).
+   `--no-demo` lo actualiza sin el ejemplo.
+1. Abre `emote_creator_blendemotes.blend` (Blender 5.2+, igual que el rig).
 2. Crea una acción nueva para el armature `export_armature` y anímala (IK, *bends* y todo lo
    que ofrece el rig).
 3. En el panel de la acción rellena nombre, autor, descripción e insignias.
@@ -66,6 +84,26 @@ Blender (emote_creator.blend)  ──export──►  emote.json  ──►  .mi
    **Recargar** en el menú de emotes. También puedes usar subcarpetas.
 
 El icono que se ve en la rueda es el render que hace el exportador desde la cámara de la escena.
+
+### Doblar hacia los lados
+
+Rota el hueso `*_bend` del antebrazo o de la pierna en **X** (delante/atrás, como siempre) y en
+**Z** (hacia los lados). El exportador escribe los tres ejes (`"bend": {"vector": [x, y, z]}`)
+solo cuando hace falta; los emotes que solo doblan hacia delante siguen escribiendo `"value"`,
+así que los emotes viejos y los de Emotecraft funcionan igual.
+
+### Modelos (micrófono, caballo, lo que quieras)
+
+1. Modela el objeto (o impórtalo) y **emparéntalo a un hueso** del `export_armature`
+   (*Parent → Bone*): `right_item` / `left_item` para lo que va en la mano, `body` para algo
+   que se mueve con todo el cuerpo (un caballo), o un **hueso nuevo** que añadas al armature y
+   animes como quieras (se exporta solo, con su jerarquía).
+2. Mete los objetos en una colección y elígela en el campo **Modelos** del panel de la acción.
+3. Exporta como siempre. Cada objeto viaja en el `.json` con su textura (la imagen del nodo
+   *Image Texture* de su material, o su color base si no tiene imagen).
+
+Límites: 20 000 triángulos por modelo, texturas de hasta 1 MB y 32 modelos por emote. Se
+dibujan sin ocultar caras traseras (sirven planos y mallas abiertas) y con transparencia.
 
 ## En el juego
 
@@ -163,5 +201,6 @@ shared/modern/     código compartido 1.16.5+ (nombres de Mojang): main, fabric,
 versions/<mc>/     un build.gradle por versión (versiones de los loaders)
 gradle/            lógica de build común y el preprocesador (preprocess.gradle)
 ci/                versiones de CI (targets.txt) y herramientas de consulta de API
-tools/blender/     exportador por lotes y generador de datos de referencia de Blender
+tools/blender/     actualizador del rig, exportador (blendemotes_export.py, por lotes y botón
+                   del rig) y generador de datos de referencia de Blender
 ```

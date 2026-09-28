@@ -8,6 +8,7 @@ import dev.blendemotes.core.math.Vec3;
 import dev.blendemotes.core.pose.PlayerPose;
 import dev.blendemotes.core.rig.PlayerPart;
 import dev.blendemotes.modern.ModernEmotes;
+import dev.blendemotes.modern.render.EmoteModels;
 import dev.blendemotes.modern.render.MeshEmitter;
 import dev.blendemotes.modern.render.PartMeshes;
 import dev.blendemotes.modern.render.PoseMath;
@@ -45,7 +46,11 @@ import net.minecraft.world.entity.player.PlayerModelPart;
 import net.minecraft.world.item.Items;
 //#endif
 
-/** While emoting, the cape follows the rig's cape bone (attached to the upper torso) and bends. */
+/**
+ * While emoting, the cape follows the rig's cape bone (attached to the upper torso) and bends.
+ * The models of the emote (microphone, horse...) are drawn here too: every player renderer has
+ * this layer and its pose stack is already in the rig's space.
+ */
 @Mixin(CapeLayer.class)
 public abstract class CapeLayerMixin {
     @Unique
@@ -60,6 +65,16 @@ public abstract class CapeLayerMixin {
         //#endif
     }
 
+    /** The cape is drawn turned around (like vanilla): half a turn about Y flips the bend's X and Z. */
+    @Unique
+    private static Vec3 blendemotes$capeBend(PlayerPose pose) {
+        if (!ModernEmotes.bendsEnabled()) {
+            return Vec3.ZERO;
+        }
+        Vec3 b = pose.bendVector(PlayerPart.CAPE);
+        return new Vec3(-b.x, b.y, -b.z);
+    }
+
     //#if MC < 12109
     @Unique
     private void blendemotes$draw(PoseStack poseStack, MultiBufferSource buffers, int light, PlayerPose pose,
@@ -68,7 +83,7 @@ public abstract class CapeLayerMixin {
         Vec3 pivot = pose.rig().pivot(PlayerPart.CAPE);
         PoseMath.mul(poseStack, pose.matrix(PlayerPart.CAPE).mul(Mat4.translation(pivot.x, pivot.y, pivot.z))
                 .mul(Mat4.rotationY(Math.PI)));
-        double bend = ModernEmotes.bendsEnabled() ? -pose.bend(PlayerPart.CAPE) : 0;
+        Vec3 bend = blendemotes$capeBend(pose);
         VertexConsumer consumer = buffers.getBuffer(blendemotes$entitySolid(texture));
         MeshEmitter.emit(PartMeshes.cape().deform(bend, pose.joint(PlayerPart.CAPE), blendemotes$buffer),
                 poseStack.last(), consumer, light, OverlayTexture.NO_OVERLAY, 0xFFFFFFFF);
@@ -92,6 +107,9 @@ public abstract class CapeLayerMixin {
             return;
         }
         ci.cancel();
+        if (!state.isInvisible) {
+            EmoteModels.submit(poseStack, collector, light, pose);
+        }
         if (state.isInvisible || !state.showCape || state.skin.cape() == null
                 || hasLayer(state.chestEquipment, EquipmentClientInfo.LayerType.WINGS)) {
             return;
@@ -101,7 +119,7 @@ public abstract class CapeLayerMixin {
         Vec3 pivot = pose.rig().pivot(PlayerPart.CAPE);
         PoseMath.mul(poseStack, pose.matrix(PlayerPart.CAPE).mul(Mat4.translation(pivot.x, pivot.y, pivot.z))
                 .mul(Mat4.rotationY(Math.PI)));
-        double bend = ModernEmotes.bendsEnabled() ? -pose.bend(PlayerPart.CAPE) : 0;
+        Vec3 bend = blendemotes$capeBend(pose);
         final BendMesh.Output mesh = PartMeshes.cape().deform(bend, pose.joint(PlayerPart.CAPE), new BendMesh.Output());
         collector.submitCustomGeometry(poseStack, blendemotes$entitySolid(texture),
                 (p, consumer) -> MeshEmitter.emit(mesh, p, consumer, light, OverlayTexture.NO_OVERLAY, 0xFFFFFFFF));
@@ -122,6 +140,9 @@ public abstract class CapeLayerMixin {
             return;
         }
         ci.cancel();
+        if (!state.isInvisible) {
+            EmoteModels.render(poseStack, buffers, light, pose);
+        }
         ResourceLocation texture = state.skin.capeTexture();
         if (state.isInvisible || !state.showCape || texture == null
                 || hasLayer(state.chestEquipment, EquipmentClientInfo.LayerType.WINGS)) {
@@ -140,6 +161,9 @@ public abstract class CapeLayerMixin {
             return;
         }
         ci.cancel();
+        if (!player.isInvisible()) {
+            EmoteModels.render(poseStack, buffers, light, pose);
+        }
         //#if MC >= 12002
         ResourceLocation texture = player.getSkin().capeTexture();
         //#else

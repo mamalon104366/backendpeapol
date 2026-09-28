@@ -7,3 +7,6 @@ run/
 .idea/
 .vscode/
 *.class
+__pycache__/
+*.py.log
+*.py.done

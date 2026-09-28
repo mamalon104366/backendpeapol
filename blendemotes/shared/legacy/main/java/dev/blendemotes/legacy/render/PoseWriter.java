@@ -1,5 +1,6 @@
 package dev.blendemotes.legacy.render;
 
+import dev.blendemotes.core.math.Vec3;
 import dev.blendemotes.core.pose.PartTransform;
 import dev.blendemotes.core.pose.PlayerPose;
 import dev.blendemotes.core.pose.VanillaPose;
@@ -44,7 +45,7 @@ public final class PoseWriter {
             e.scaleX = (float) t.scaleX;
             e.scaleY = (float) t.scaleY;
             e.scaleZ = (float) t.scaleZ;
-            e.bend = p.bend != null && EmoteSettings.bends() ? pose.bend(p) : 0;
+            e.bend = p.bend != null && EmoteSettings.bends() ? pose.bendVector(p) : Vec3.ZERO;
             e.setJoint(pose.joint(p));
         }
     }

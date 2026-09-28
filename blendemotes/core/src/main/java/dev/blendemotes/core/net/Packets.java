@@ -22,7 +22,7 @@ public final class Packets {
     public static final String LEGACY_CHANNEL = "BlendEmotes";
     /** Chunk size, well below the 32 KiB client-to-server payload limit of old versions. */
     public static final int CHUNK = 24 * 1024;
-    public static final int MAX_CHUNKS = 64;
+    public static final int MAX_CHUNKS = 160;
 
     // client -> server
     public static final int C_HELLO = 1;

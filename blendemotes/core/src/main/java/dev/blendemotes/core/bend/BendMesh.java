@@ -205,32 +205,82 @@ public final class BendMesh {
     }
 
     /**
-     * Bends the mesh.
+     * Bends the mesh forwards/backwards.
      *
      * @param angle radians around the part-local X axis
      * @param joint joint position (part-local)
      */
     public Output deform(double angle, Vec3 joint, Output out) {
+        return deform(new Vec3(angle, 0, 0), joint, out);
+    }
+
+    /**
+     * Bends the mesh in any direction: the lower half turns about an axis through the joint.
+     *
+     * @param bend  rotation vector (radians; direction = axis, length = angle), part-local;
+     *              {@code (a, 0, 0)} is the classic forwards/backwards bend
+     * @param joint joint position (part-local)
+     */
+    public Output deform(Vec3 bend, Vec3 joint, Output out) {
         out.ensure(quadCount);
+        Axis axis = new Axis(bend);
         float[] dst = out.positions;
         for (int v = 0; v < quadCount * 4; v++) {
-            double x = positions[v * 3];
-            double y = positions[v * 3 + 1];
-            double z = positions[v * 3 + 2];
-            double phi = blendAngle(angle, weights[v]);
-            double c = Math.cos(phi);
-            double s = Math.sin(phi);
-            double dy = y - joint.y;
-            double dz = z - joint.z;
-            dst[v * 3] = (float) x;
-            dst[v * 3 + 1] = (float) (joint.y + dy * c - dz * s);
-            dst[v * 3 + 2] = (float) (joint.z + dy * s + dz * c);
+            double phi = blendAngle(axis.angle, weights[v]);
+            axis.rotate(positions[v * 3] - joint.x, positions[v * 3 + 1] - joint.y, positions[v * 3 + 2] - joint.z, phi);
+            dst[v * 3] = (float) (joint.x + axis.rx);
+            dst[v * 3 + 1] = (float) (joint.y + axis.ry);
+            dst[v * 3 + 2] = (float) (joint.z + axis.rz);
         }
         System.arraycopy(uvs, 0, out.uvs, 0, quadCount * 8);
         for (int q = 0; q < quadCount; q++) {
-            computeNormal(q, angle, out);
+            computeNormal(q, axis, out);
         }
         return out;
+    }
+
+    /** A bend axis (unit vector) and angle, with a Rodrigues rotation that keeps its result. */
+    private static final class Axis {
+        final double angle;
+        final double kx;
+        final double ky;
+        final double kz;
+        double rx;
+        double ry;
+        double rz;
+
+        Axis(Vec3 bend) {
+            double len = bend.length();
+            angle = len;
+            if (len < 1e-12) {
+                kx = 1;
+                ky = 0;
+                kz = 0;
+            } else {
+                kx = bend.x / len;
+                ky = bend.y / len;
+                kz = bend.z / len;
+            }
+        }
+
+        /** Rotates (x, y, z) about the axis by phi into rx, ry, rz. */
+        void rotate(double x, double y, double z, double phi) {
+            if (phi == 0) {
+                rx = x;
+                ry = y;
+                rz = z;
+                return;
+            }
+            double c = Math.cos(phi);
+            double s = Math.sin(phi);
+            double dot = kx * x + ky * y + kz * z;
+            double cx = ky * z - kz * y;
+            double cy = kz * x - kx * z;
+            double cz = kx * y - ky * x;
+            rx = x * c + cx * s + kx * dot * (1 - c);
+            ry = y * c + cy * s + ky * dot * (1 - c);
+            rz = z * c + cz * s + kz * dot * (1 - c);
+        }
     }
 
     /**
@@ -257,7 +307,7 @@ public final class BendMesh {
         return 2 * Math.atan2(w * sw, (1 - w) + w * cw);
     }
 
-    private void computeNormal(int q, double angle, Output out) {
+    private void computeNormal(int q, Axis axis, Output out) {
         float[] p = out.positions;
         int b = q * 12;
         // diagonals of the deformed quad
@@ -272,14 +322,10 @@ public final class BendMesh {
         double nz = ax * by - ay * bx;
         // reference: rest normal rotated like the middle of the quad
         double w = (weights[q * 4] + weights[q * 4 + 1] + weights[q * 4 + 2] + weights[q * 4 + 3]) / 4.0;
-        double phi = blendAngle(angle, w);
-        double c = Math.cos(phi);
-        double s = Math.sin(phi);
-        double rx = normals[q * 3];
-        double ry0 = normals[q * 3 + 1];
-        double rz0 = normals[q * 3 + 2];
-        double ry = ry0 * c - rz0 * s;
-        double rz = ry0 * s + rz0 * c;
+        axis.rotate(normals[q * 3], normals[q * 3 + 1], normals[q * 3 + 2], blendAngle(axis.angle, w));
+        double rx = axis.rx;
+        double ry = axis.ry;
+        double rz = axis.rz;
         double len = Math.sqrt(nx * nx + ny * ny + nz * nz);
         if (len < 1e-9) {
             nx = rx;
@@ -302,12 +348,14 @@ public final class BendMesh {
 
     /** Where a single rest point ends up (part-local), used by tests and attachment code. */
     public static Vec3 deformPoint(Vec3 p, BendProfile profile, double angle, Vec3 joint) {
-        double phi = blendAngle(angle, profile.weight(p.y));
-        double c = Math.cos(phi);
-        double s = Math.sin(phi);
-        double dy = p.y - joint.y;
-        double dz = p.z - joint.z;
-        return new Vec3(p.x, joint.y + dy * c - dz * s, joint.z + dy * s + dz * c);
+        return deformPoint(p, profile, new Vec3(angle, 0, 0), joint);
+    }
+
+    /** {@link #deformPoint(Vec3, BendProfile, double, Vec3)} for a bend in any direction. */
+    public static Vec3 deformPoint(Vec3 p, BendProfile profile, Vec3 bend, Vec3 joint) {
+        Axis axis = new Axis(bend);
+        axis.rotate(p.x - joint.x, p.y - joint.y, p.z - joint.z, blendAngle(axis.angle, profile.weight(p.y)));
+        return new Vec3(joint.x + axis.rx, joint.y + axis.ry, joint.z + axis.rz);
     }
 
     // accessors for tests

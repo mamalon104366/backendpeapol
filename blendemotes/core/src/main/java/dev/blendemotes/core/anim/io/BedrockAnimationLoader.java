@@ -3,6 +3,7 @@ package dev.blendemotes.core.anim.io;
 import dev.blendemotes.core.anim.Animation;
 import dev.blendemotes.core.anim.BoneAnimation;
 import dev.blendemotes.core.anim.Easing;
+import dev.blendemotes.core.anim.EmoteModel;
 import dev.blendemotes.core.anim.Keyframe;
 import dev.blendemotes.core.anim.LoopMode;
 import dev.blendemotes.core.anim.Track;
@@ -86,7 +87,7 @@ public final class BedrockAnimationLoader {
         Map<String, Object> bonesObj = JsonUtil.getObject(anim, "bones");
         for (Map.Entry<String, Object> b : bonesObj.entrySet()) {
             Map<String, Object> boneObj = JsonUtil.asObject(b.getValue(), "bone '" + b.getKey() + "'");
-            BoneAnimation bone = new BoneAnimation(
+            BoneAnimation bone = BoneAnimation.withBendAxes(
                     readVectorChannel(boneObj.get("position"), false),
                     readVectorChannel(boneObj.get("rotation"), false),
                     readVectorChannel(boneObj.get("scale"), true),
@@ -161,7 +162,8 @@ public final class BedrockAnimationLoader {
             }
         }
 
-        Animation animation = new Animation(length, loopMode, loopStart, bones, pivots, parents, applyBend, blenderRig);
+        List<EmoteModel> models = readModels(own.get("models"));
+        Animation animation = new Animation(length, loopMode, loopStart, bones, pivots, parents, applyBend, blenderRig, models);
         EmoteInfo info = readInfo(key, pal);
 
         Map<String, Object> canonicalObj = new LinkedHashMap<String, Object>(anim);
@@ -185,6 +187,60 @@ public final class BedrockAnimationLoader {
         }
         return pal.containsKey("bages") || pivots.containsKey("body_control") || pivots.containsKey("waist")
                 || parents.containsValue("body_control") || parents.containsValue("waist");
+    }
+
+    /**
+     * Models that move with the emote, in our extension block:
+     * <pre>
+     * "blendemotes": { "models": [ { "name": "microphone", "bone": "right_item",
+     *     "texture": "&lt;base64 PNG&gt;", "doubleSided": true,
+     *     "positions": [x, y, z, ...], "uvs": [u, v, ...], "normals": [x, y, z, ...] } ] }
+     * </pre>
+     * Triangles, three vertices each, in Minecraft model space at the rig's rest pose (pixels,
+     * Y down, origin at the neck).
+     */
+    static List<EmoteModel> readModels(Object modelsObj) {
+        List<EmoteModel> out = new ArrayList<EmoteModel>();
+        if (!(modelsObj instanceof List)) {
+            return out;
+        }
+        for (Object o : JsonUtil.asArray(modelsObj, "models")) {
+            Map<String, Object> m = JsonUtil.asObject(o, "model");
+            String name = JsonUtil.getString(m, "name", "model");
+            String bone = normalizeBoneName(JsonUtil.getString(m, "bone", "body"));
+            byte[] texture = null;
+            Object tex = m.get("texture");
+            if (tex instanceof String) {
+                try {
+                    texture = Base64.getDecoder().decode(((String) tex).replaceAll("\\s", ""));
+                } catch (IllegalArgumentException ignored) {
+                    texture = null;
+                }
+            }
+            if (texture == null || texture.length == 0) {
+                texture = EmoteModel.whitePixel();
+            }
+            try {
+                out.add(new EmoteModel(name, bone, floats(m.get("positions"), "positions"), floats(m.get("uvs"), "uvs"),
+                        floats(m.get("normals"), "normals"), texture, JsonUtil.getBoolean(m, "doubleSided", true)));
+            } catch (IllegalArgumentException ex) {
+                throw new JsonException(ex.getMessage());
+            }
+        }
+        return out;
+    }
+
+    private static float[] floats(Object v, String what) {
+        List<Object> list = JsonUtil.asArray(v, what);
+        float[] r = new float[list.size()];
+        for (int i = 0; i < r.length; i++) {
+            Object o = list.get(i);
+            if (!(o instanceof Number)) {
+                throw new JsonException(what + " must be numbers");
+            }
+            r[i] = ((Number) o).floatValue();
+        }
+        return r;
     }
 
     private static void readModel(Map<String, Object> model, Map<String, Vec3> out) {
@@ -291,9 +347,18 @@ public final class BedrockAnimationLoader {
         return tracks;
     }
 
-    private static Track readBendChannel(Object channel) {
+    /**
+     * The bend channel: {@code "value"} (or a plain number) is the classic forwards/backwards
+     * bend; {@code "vector": [x, y, z]} also twists the lower half (y) or bends it sideways (z).
+     * Per-axis easings may be given as easingX/Y/Z, like the other channels.
+     */
+    private static Track[] readBendChannel(Object channel) {
         List<RawKey> raw = readRawKeys(channel, true);
-        return buildTrack(raw, 0, "");
+        Track[] tracks = new Track[3];
+        for (int axis = 0; axis < 3; axis++) {
+            tracks[axis] = buildTrack(raw, axis, "XYZ".charAt(axis) + "");
+        }
+        return tracks;
     }
 
     private static List<RawKey> readRawKeys(Object channel, boolean bend) {
@@ -398,10 +463,6 @@ public final class BedrockAnimationLoader {
             Object[] r = new Object[3];
             for (int i = 0; i < 3; i++) {
                 r[i] = i < list.size() ? list.get(i) : null;
-            }
-            if (bend) {
-                r[1] = null;
-                r[2] = null;
             }
             return r;
         }

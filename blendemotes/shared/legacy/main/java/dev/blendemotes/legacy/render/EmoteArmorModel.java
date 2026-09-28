@@ -12,7 +12,7 @@ public class EmoteArmorModel extends ModelBiped {
         bipedHeadwear = part(32, 0, -4, -8, -4, 8, 8, 8, size + 0.5F, false, null, 0, 0, 0);
         bipedBody = part(16, 16, -4, 0, -2, 8, 12, 4, size, false, BendProfile.TORSO, 0, 0, 0);
         bipedRightArm = part(40, 16, -3, -2, -2, 4, 12, 4, size, false, BendProfile.ARM, -5, 2, 0);
-        bipedLeftArm = part(40, 16, -1, -2, -2, 4, 12, 4, size, true, BendProfile.ARM, 5, 2, 0);
+        bipedLeftArm = part(40, 16, -1, -2, -2, 4, 12, 4, size, true, BendProfile.LEFT_ARM, 5, 2, 0);
         bipedRightLeg = part(0, 16, -2, 0, -2, 4, 12, 4, size, false, BendProfile.LEG, -1.9F, 12, 0);
         bipedLeftLeg = part(0, 16, -2, 0, -2, 4, 12, 4, size, true, BendProfile.LEG, 1.9F, 12, 0);
     }

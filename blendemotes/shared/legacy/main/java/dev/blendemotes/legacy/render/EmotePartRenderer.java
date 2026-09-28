@@ -18,8 +18,8 @@ public class EmotePartRenderer extends ModelRenderer {
     private final BendMesh mesh;
     private final BendMesh.Output buffer = new BendMesh.Output();
     private Vec3 joint = Vec3.ZERO;
-    /** Bend angle (radians), 0 = straight. */
-    public double bend;
+    /** Bend as a rotation vector (radians, part-local): X forwards/backwards, Z sideways; zero = straight. */
+    public Vec3 bend = Vec3.ZERO;
     public float scaleX = 1;
     public float scaleY = 1;
     public float scaleZ = 1;
@@ -46,7 +46,7 @@ public class EmotePartRenderer extends ModelRenderer {
 
     public void resetEmote() {
         emote = false;
-        bend = 0;
+        bend = Vec3.ZERO;
         scaleX = 1;
         scaleY = 1;
         scaleZ = 1;
@@ -62,7 +62,7 @@ public class EmotePartRenderer extends ModelRenderer {
     }
 
     private boolean custom() {
-        return emote && (bend != 0 || scaleX != 1 || scaleY != 1 || scaleZ != 1);
+        return emote && (bend.x != 0 || bend.y != 0 || bend.z != 0 || scaleX != 1 || scaleY != 1 || scaleZ != 1);
     }
 
     @Override

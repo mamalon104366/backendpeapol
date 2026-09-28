@@ -11,7 +11,7 @@ public enum PlayerPart {
     HEAD("head", new Vec3(0, 0, 0), null),
     TORSO("torso", new Vec3(0, 0, 0), BendProfile.TORSO),
     RIGHT_ARM("right_arm", new Vec3(-5, 2, 0), BendProfile.ARM),
-    LEFT_ARM("left_arm", new Vec3(5, 2, 0), BendProfile.ARM),
+    LEFT_ARM("left_arm", new Vec3(5, 2, 0), BendProfile.LEFT_ARM),
     RIGHT_LEG("right_leg", new Vec3(-1.9, 12, 0), BendProfile.LEG),
     LEFT_LEG("left_leg", new Vec3(1.9, 12, 0), BendProfile.LEG),
     CAPE("cape", new Vec3(0, 0, 2), BendProfile.CAPE),

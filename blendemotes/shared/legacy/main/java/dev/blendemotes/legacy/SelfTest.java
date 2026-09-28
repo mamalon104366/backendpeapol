@@ -22,7 +22,7 @@ import net.minecraft.world.GameType;
 final class SelfTest {
     private static final boolean ENABLED = Boolean.getBoolean("blendemotes.selftest")
             || "1".equals(System.getenv("BLENDEMOTES_SELFTEST"));
-    private static final String[] EMOTES = {"Inchworm", "Cartwheel"};
+    private static final String[] EMOTES = {"Inchworm", "Cartwheel", "Cantar"};
     private static final int[] SHOTS = {6, 12, 18, 24};
     private static int state;
     private static int timer;
@@ -132,7 +132,8 @@ final class SelfTest {
         PlayerPose pose = client.pose(Compat.player().getUniqueID(), new VanillaPose(), false, 0, new PlayerPose());
         if (pose != null) {
             LegacyEmotes.LOGGER.info("[selftest] " + name + " right_arm " + pose.transform(PlayerPart.RIGHT_ARM)
-                    + " bend " + Math.toDegrees(pose.bend(PlayerPart.RIGHT_ARM)));
+                    + " bend " + Math.toDegrees(pose.bend(PlayerPart.RIGHT_ARM))
+                    + " left_arm bend " + pose.bendVector(PlayerPart.LEFT_ARM) + " models " + pose.models().size());
         } else {
             LegacyEmotes.LOGGER.info("[selftest] " + name + " (no emote)");
         }

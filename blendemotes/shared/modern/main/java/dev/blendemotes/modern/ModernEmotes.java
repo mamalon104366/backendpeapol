@@ -13,7 +13,9 @@ import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
+//#if MC < 260300
 import org.lwjgl.glfw.GLFW;
+//#endif
 //#if MC >= 11800
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,9 +50,16 @@ public final class ModernEmotes {
     //#else
     private static final String KEY_CATEGORY = "key.categories.blendemotes";
     //#endif
+    //#if MC >= 260300
+    // 26.3 reads input through SDL: keyboard keys are InputConstants.Type.KEYBOARD
+    public static final KeyMapping KEY_WHEEL = new KeyMapping("key.blendemotes.wheel", InputConstants.Type.KEYBOARD, InputConstants.KEY_B, KEY_CATEGORY);
+    public static final KeyMapping KEY_MENU = new KeyMapping("key.blendemotes.menu", InputConstants.Type.KEYBOARD, InputConstants.KEY_N, KEY_CATEGORY);
+    public static final KeyMapping KEY_STOP = new KeyMapping("key.blendemotes.stop", InputConstants.Type.KEYBOARD, InputConstants.UNKNOWN.getValue(), KEY_CATEGORY);
+    //#else
     public static final KeyMapping KEY_WHEEL = new KeyMapping("key.blendemotes.wheel", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_B, KEY_CATEGORY);
     public static final KeyMapping KEY_MENU = new KeyMapping("key.blendemotes.menu", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_N, KEY_CATEGORY);
     public static final KeyMapping KEY_STOP = new KeyMapping("key.blendemotes.stop", InputConstants.Type.KEYSYM, InputConstants.UNKNOWN.getValue(), KEY_CATEGORY);
+    //#endif
 
     private static ClientEmotes client;
     private static Sender sender;

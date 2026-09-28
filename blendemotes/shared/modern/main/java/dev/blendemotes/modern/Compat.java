@@ -125,8 +125,10 @@ public final class Compat {
 
     /** Hides the HUD (hotbar, crosshair) like F1. */
     public static void hideHud(Minecraft mc) {
-        //#if MC >= 260200
-        mc.gui.hud.setHidden(true);
+        //#if MC >= 260300
+        if (!mc.gui.hud.isHidden()) {
+            mc.gui.hud.toggle();
+        }
         //#else
         mc.options.hideGui = true;
         //#endif

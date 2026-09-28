@@ -223,7 +223,16 @@ jobs:
           cp "$jar" run/mods/
           if [ "${{ matrix.loader }}" = "fabric" ] && [ -n "${{ matrix.fabricApi }}" ]; then
             v="${{ matrix.fabricApi }}"
-            curl -sfL --retry 3 -o "run/mods/fabric-api-$v.jar" "https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/$v/fabric-api-$v.jar"
+            # the full jar from Modrinth: on Fabric's maven the old versions are only small stubs
+            curl -sfLG --retry 3 "https://api.modrinth.com/v2/project/fabric-api/version" \
+              --data-urlencode 'loaders=["fabric"]' --data-urlencode 'game_versions=["${{ matrix.mc }}"]' -o fabric-api.json || echo "[]" > fabric-api.json
+            url=$(jq -r --arg v "$v" '([.[] | select(.version_number == $v)] + .) | .[0].files // [] | ((map(select(.primary)) + .) | .[0].url) // empty' fabric-api.json)
+            if [ -n "$url" ]; then
+              echo "Fabric API from $url"
+              curl -sfL --retry 3 -o "run/mods/fabric-api.jar" "$url"
+            else
+              curl -sfL --retry 3 -o "run/mods/fabric-api.jar" "https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/$v/fabric-api-$v.jar"
+            fi
           fi
           ls -la run/mods
       - uses: actions/setup-java@v4
@@ -248,11 +257,14 @@ jobs:
       - name: Check the self-test
         if: always()
         run: |
-          log=run/logs/latest.log
-          grep -E "selftest|BlendEmotes" "$log" | head -100 || true
+          # Forge 1.8.9-1.12.2 logs the client to fml-client-latest.log
+          logs=$(ls run/logs/*.log 2>/dev/null || true)
+          echo "logs: $logs"
+          [ -n "$logs" ] || exit 1
+          grep -h -E "selftest|BlendEmotes" $logs | head -100 || true
           echo "----- exceptions with context -----"
-          grep -n -B4 -A20 -E "Exception|FATAL|Mixin apply failed|InvalidInjection" "$log" | cut -c1-400 | head -300 || true
-          grep -q BLENDEMOTES_SELFTEST_DONE "$log"
+          grep -n -B4 -A20 -E "Exception|FATAL|Mixin apply failed|InvalidInjection" $logs | cut -c1-400 | head -300 || true
+          grep -q BLENDEMOTES_SELFTEST_DONE $logs
       - name: Contact sheet
         if: always()
         run: |

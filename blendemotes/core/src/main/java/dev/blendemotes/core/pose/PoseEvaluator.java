@@ -2,9 +2,11 @@ package dev.blendemotes.core.pose;
 
 import dev.blendemotes.core.anim.Animation;
 import dev.blendemotes.core.anim.BoneAnimation;
+import dev.blendemotes.core.anim.EmoteModel;
 import dev.blendemotes.core.anim.Track;
 import dev.blendemotes.core.anim.molang.Molang;
 import dev.blendemotes.core.math.Mat4;
+import dev.blendemotes.core.math.Quat;
 import dev.blendemotes.core.math.Vec3;
 import dev.blendemotes.core.rig.PlayerPart;
 import dev.blendemotes.core.rig.RigDefinition;
@@ -54,7 +56,16 @@ public final class PoseEvaluator {
         out.setRig(rig);
         out.root.set(e.local(BODY));
         for (PlayerPart p : PlayerPart.VALUES) {
-            out.setPart(p, e.world(p.bone), e.bendAngle(p.bone));
+            out.setPart(p, e.world(p.bone), e.bendVector(p.bone));
+        }
+        out.clearBones();
+        if (anim != null) {
+            out.addModels(anim.models);
+            for (EmoteModel m : anim.models) {
+                if (out.boneMatrix(m.bone) == null) {
+                    out.setBone(m.bone, e.modelBone(m.bone), e.modelBonePivot(m.bone));
+                }
+            }
         }
         return out;
     }
@@ -134,30 +145,127 @@ public final class PoseEvaluator {
         return bone.equals(PlayerPart.HEAD.bone) || bone.equals(PlayerPart.RIGHT_ARM.bone) || bone.equals(PlayerPart.LEFT_ARM.bone);
     }
 
+    /**
+     * Matrix (rest model -> posed, relative to the root) of the bone a model hangs from: a player
+     * part, the lower half of a bendable part ("right_arm_bend"), the root ("body") or a
+     * custom bone of the emote.
+     */
+    Mat4 modelBone(String bone) {
+        if (bone.equals(BODY)) {
+            return new Mat4();
+        }
+        PlayerPart lower = bendBase(bone);
+        if (lower != null) {
+            return new Mat4(world(lower.bone)).mulLocal(bendSegment(lower.bone));
+        }
+        return new Mat4(world(bone));
+    }
+
+    Vec3 modelBonePivot(String bone) {
+        PlayerPart lower = bendBase(bone);
+        if (lower != null) {
+            return rig.pivot(lower).add(rig.joint(lower));
+        }
+        return bone.equals(BODY) ? rig.bodyPivot : pivotOf(bone, PlayerPart.byBone(bone));
+    }
+
+    /** The part whose lower half a "<part>_bend" bone is, or null. */
+    private static PlayerPart bendBase(String bone) {
+        if (!bone.endsWith("_bend")) {
+            return null;
+        }
+        PlayerPart part = PlayerPart.byBone(bone.substring(0, bone.length() - 5));
+        return part != null && part.bend != null ? part : null;
+    }
+
     /** Rotation of the moving half of a bendable part, in the part's rest model space. */
     Mat4 bendSegment(String bone) {
         PlayerPart part = PlayerPart.byBone(bone);
         if (part == null || part.bend == null) {
             return new Mat4();
         }
-        double angle = bendAngle(bone);
-        if (angle == 0) {
+        Mat4 r = bendRotation(bone);
+        if (r == null) {
             return new Mat4();
         }
         Vec3 j = rig.pivot(part).add(rig.joint(part));
-        return Mat4.translation(j.x, j.y, j.z).mulLocal(Mat4.rotationX(angle)).mulLocal(Mat4.translation(-j.x, -j.y, -j.z));
+        return Mat4.translation(j.x, j.y, j.z).mulLocal(r).mulLocal(Mat4.translation(-j.x, -j.y, -j.z));
     }
 
-    double bendAngle(String bone) {
+    /**
+     * The bend as a rotation about the joint (part-local, rest pose), or null when straight.
+     * Forwards/backwards only is a plain rotation about X (the classic bend); with a sideways
+     * or twist part it is the bend bone's X-Y-Z Euler rotation about that bone's own axes.
+     */
+    Mat4 bendRotation(String bone) {
         PlayerPart part = PlayerPart.byBone(bone);
         if (anim == null || part == null || part.bend == null) {
-            return 0;
+            return null;
         }
         BoneAnimation ba = anim.bone(bone);
-        if (ba == null || ba.bend.isEmpty()) {
-            return 0;
+        if (ba == null || !ba.hasBend()) {
+            return null;
         }
-        return Math.toRadians(ba.bend.evaluate(time, ctx));
+        double x = axis(ba, BoneAnimation.X);
+        double y = axis(ba, BoneAnimation.Y);
+        double z = axis(ba, BoneAnimation.Z);
+        if (y == 0 && z == 0) {
+            return x == 0 ? null : Mat4.rotationX(x);
+        }
+        Mat4 r = Mat4.rotationZYX(x, y, z);
+        double tilt = anim.blenderRig ? rig.blenderBendTilt(part) : 0;
+        if (tilt != 0) {
+            r = Mat4.rotationX(tilt).mul(r).mul(Mat4.rotationX(-tilt));
+        }
+        return r;
+    }
+
+    private double axis(BoneAnimation ba, int axis) {
+        Track t = ba.bendAxes[axis];
+        return t.isEmpty() ? 0 : Math.toRadians(t.evaluate(time, ctx));
+    }
+
+    /**
+     * The bend as a rotation vector (axis times angle, radians, part-local). A forwards/backwards
+     * bend keeps its exact angle on X (even past half a turn); see {@link PlayerPose#bendVector}.
+     */
+    Vec3 bendVector(String bone) {
+        PlayerPart part = PlayerPart.byBone(bone);
+        if (anim == null || part == null || part.bend == null) {
+            return Vec3.ZERO;
+        }
+        BoneAnimation ba = anim.bone(bone);
+        if (ba == null || !ba.hasBend()) {
+            return Vec3.ZERO;
+        }
+        if (!ba.hasBendOffAxis()) {
+            return new Vec3(axis(ba, BoneAnimation.X), 0, 0);
+        }
+        Mat4 r = bendRotation(bone);
+        return r == null ? Vec3.ZERO : rotationVector(r);
+    }
+
+    /** Signed forwards/backwards bend angle (radians); the X part of {@link #bendVector}. */
+    double bendAngle(String bone) {
+        return bendVector(bone).x;
+    }
+
+    /** Axis times angle of a rotation matrix, the angle in [0, pi]. */
+    static Vec3 rotationVector(Mat4 r) {
+        Quat q = Quat.fromMatrix(r);
+        double x = q.x, y = q.y, z = q.z, w = q.w;
+        if (w < 0) {
+            x = -x;
+            y = -y;
+            z = -z;
+            w = -w;
+        }
+        double s = Math.sqrt(x * x + y * y + z * z);
+        if (s < 1e-12) {
+            return Vec3.ZERO;
+        }
+        double angle = 2 * Math.atan2(s, w);
+        return new Vec3(x / s * angle, y / s * angle, z / s * angle);
     }
 
     private Vec3 pivotOf(String bone, PlayerPart part) {

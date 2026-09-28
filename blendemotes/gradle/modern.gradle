@@ -150,9 +150,24 @@ if (loaders.contains("forge")) {
         tasks.matching { it.name == "forgeRunClient" && project.hasProperty("selftest") }.configureEach {
             jvmArgs("-Dbsl.debug=true")
         }
+        tasks.matching { it.name == "forgeRunClient" }.configureEach { JavaExec t ->
+            t.doFirst {
+                // Forge's early loading window looks for Forge's module by name, which a development
+                // run does not have (NullPointerException in DisplayWindow.updateModuleReads)
+                def cfg = new File(t.workingDir, "config/fml.toml")
+                cfg.parentFile.mkdirs()
+                def text = cfg.exists() ? cfg.getText("UTF-8") : ""
+                if (!(text =~ /(?m)^\s*earlyWindowControl\s*=\s*false/)) {
+                    text = text.replaceAll(/(?m)^\s*earlyWindowControl\s*=.*\R?/, "")
+                    cfg.setText("earlyWindowControl = false\n" + text, "UTF-8")
+                }
+            }
+        }
     }
-    if ((project.mcVersion as int) < 11700) {
-        // Forge 1.16.5 only reads mods.toml from the first folder of the mod: the Forge resources
+    if ((project.mcVersion as int) < 11700 || (project.mcVersion as int) >= 12003) {
+        // One mod made of several folders: Forge 1.16.5 only reads mods.toml from the first one
+        // (the Forge resources), and since 1.20.3 each folder not listed here is a mod of its own
+        // ("constructed 0 mods").
         tasks.matching { it.name == "forgeRunClient" || it.name == "forgeRunServer" }.configureEach { JavaExec t ->
             t.doFirst {
                 def forge = sourceSets.forge.output

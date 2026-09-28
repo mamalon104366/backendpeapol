@@ -36,7 +36,7 @@ public final class PartMeshes {
     public static void armor(HumanoidModel<?> model, float inflate) {
         set(model.body, CubeGeometry.box(16, 16, -4, 0, -2, 8, 12, 4, inflate, false, 64, 32).toBendMesh(BendProfile.TORSO));
         set(model.rightArm, CubeGeometry.box(40, 16, -3, -2, -2, 4, 12, 4, inflate, false, 64, 32).toBendMesh(BendProfile.ARM));
-        set(model.leftArm, CubeGeometry.box(40, 16, -1, -2, -2, 4, 12, 4, inflate, true, 64, 32).toBendMesh(BendProfile.ARM));
+        set(model.leftArm, CubeGeometry.box(40, 16, -1, -2, -2, 4, 12, 4, inflate, true, 64, 32).toBendMesh(BendProfile.LEFT_ARM));
         set(model.rightLeg, CubeGeometry.box(0, 16, -2, 0, -2, 4, 12, 4, inflate, false, 64, 32).toBendMesh(BendProfile.LEG));
         set(model.leftLeg, CubeGeometry.box(0, 16, -2, 0, -2, 4, 12, 4, inflate, true, 64, 32).toBendMesh(BendProfile.LEG));
     }

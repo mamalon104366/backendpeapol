@@ -105,7 +105,11 @@ public class EmoteMenuScreen extends BaseScreen {
                 //noinspection ResultOfMethodCallIgnored
                 folder.mkdirs();
             }
+            //#if MC >= 260300
+            com.mojang.blaze3d.Blaze3D.openPath(folder.toPath());
+            //#else
             Util.getPlatform().openFile(folder);
+            //#endif
         });
         Button play = button(width / 2 + 6, by, 80, 20, Compat.translatable("blendemotes.menu.play"), () -> {
             if (selected != null) {

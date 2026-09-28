@@ -58,8 +58,8 @@ public final class RigExportRepair {
                 collect(b.position[a], times);
                 collect(b.rotation[a], times);
                 collect(b.scale[a], times);
+                collect(b.bendAxes[a], times);
             }
-            collect(b.bend, times);
         }
         if (times.size() < 2) {
             return 0;
@@ -101,7 +101,8 @@ public final class RigExportRepair {
             rot[a] = snapTrack(bone.rotation[a], fps);
             scale[a] = snapTrack(bone.scale[a], fps);
         }
-        return new BoneAnimation(pos, rot, scale, snapTrack(bone.bend, fps));
+        return new BoneAnimation(pos, rot, scale, snapTrack(bone.bendAxes[0], fps),
+                snapTrack(bone.bendAxes[1], fps), snapTrack(bone.bendAxes[2], fps));
     }
 
     private static Track snapTrack(Track track, double fps) {
@@ -125,8 +126,10 @@ public final class RigExportRepair {
             rot[a] = repairTrack(bone.rotation[a], false, report);
             scale[a] = repairTrack(bone.scale[a], false, report);
         }
+        // only the rig's own exporter writes the single forwards/backwards value; the other bend
+        // axes come from exporters that already write them right
         Track bend = repairTrack(bone.bend, true, report);
-        return new BoneAnimation(pos, rot, scale, bend);
+        return new BoneAnimation(pos, rot, scale, bend, bone.bendAxes[1], bone.bendAxes[2]);
     }
 
     static Track repairTrack(Track track, boolean bend, Report report) {

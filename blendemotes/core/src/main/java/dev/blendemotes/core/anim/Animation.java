@@ -2,8 +2,10 @@ package dev.blendemotes.core.anim;
 
 import dev.blendemotes.core.math.Vec3;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -29,6 +31,8 @@ public final class Animation {
      * tilted, item bones rotate X-Z-Y), which reproduces Blender instead of approximating it.
      */
     public final boolean blenderRig;
+    /** Models that move with the emote (props: a microphone, a horse...), maybe none. */
+    public final List<EmoteModel> models;
 
     public Animation(double length, LoopMode loopMode, double loopStart, Map<String, BoneAnimation> bones,
                      Map<String, Vec3> pivots, Map<String, String> parents, boolean applyBendToOtherBones) {
@@ -38,6 +42,13 @@ public final class Animation {
     public Animation(double length, LoopMode loopMode, double loopStart, Map<String, BoneAnimation> bones,
                      Map<String, Vec3> pivots, Map<String, String> parents, boolean applyBendToOtherBones,
                      boolean blenderRig) {
+        this(length, loopMode, loopStart, bones, pivots, parents, applyBendToOtherBones, blenderRig,
+                Collections.<EmoteModel>emptyList());
+    }
+
+    public Animation(double length, LoopMode loopMode, double loopStart, Map<String, BoneAnimation> bones,
+                     Map<String, Vec3> pivots, Map<String, String> parents, boolean applyBendToOtherBones,
+                     boolean blenderRig, List<EmoteModel> models) {
         this.length = Math.max(0, length);
         this.loopMode = loopMode;
         this.loopStart = Math.max(0, Math.min(loopStart, this.length));
@@ -46,6 +57,7 @@ public final class Animation {
         this.parents = Collections.unmodifiableMap(new LinkedHashMap<String, String>(parents));
         this.applyBendToOtherBones = applyBendToOtherBones;
         this.blenderRig = blenderRig;
+        this.models = Collections.unmodifiableList(new ArrayList<EmoteModel>(models == null ? Collections.<EmoteModel>emptyList() : models));
     }
 
     public BoneAnimation bone(String name) {

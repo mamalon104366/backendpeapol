@@ -25,7 +25,7 @@ public abstract class ModelPartMixin implements BendablePart {
     @Unique
     private boolean blendemotes$dirty;
     @Unique
-    private double blendemotes$bend;
+    private Vec3 blendemotes$bend = Vec3.ZERO;
     @Unique
     private Vec3 blendemotes$joint = Vec3.ZERO;
     @Unique
@@ -46,7 +46,7 @@ public abstract class ModelPartMixin implements BendablePart {
     }
 
     @Override
-    public void blendemotes$setEmote(boolean active, double bend, Vec3 joint, float sx, float sy, float sz) {
+    public void blendemotes$setEmote(boolean active, Vec3 bend, Vec3 joint, float sx, float sy, float sz) {
         blendemotes$active = active;
         blendemotes$dirty |= active;
         blendemotes$bend = bend;
@@ -62,7 +62,7 @@ public abstract class ModelPartMixin implements BendablePart {
     }
 
     @Override
-    public double blendemotes$bend() {
+    public Vec3 blendemotes$bend() {
         return blendemotes$bend;
     }
 
@@ -85,10 +85,15 @@ public abstract class ModelPartMixin implements BendablePart {
     public void blendemotes$clear() {
         blendemotes$active = false;
         blendemotes$dirty = false;
-        blendemotes$bend = 0;
+        blendemotes$bend = Vec3.ZERO;
         blendemotes$sx = 1;
         blendemotes$sy = 1;
         blendemotes$sz = 1;
+    }
+
+    @Unique
+    private boolean blendemotes$bent() {
+        return blendemotes$bend.x != 0 || blendemotes$bend.y != 0 || blendemotes$bend.z != 0;
     }
 
     @Inject(method = "translateAndRotate", at = @At("TAIL"))
@@ -102,7 +107,7 @@ public abstract class ModelPartMixin implements BendablePart {
     @Inject(method = "compile", at = @At("HEAD"), cancellable = true)
     private void blendemotes$compile(PoseStack.Pose pose, VertexConsumer consumer, int light, int overlay, int color,
                                      CallbackInfo ci) {
-        if (blendemotes$active && blendemotes$bend != 0 && blendemotes$mesh != null) {
+        if (blendemotes$active && blendemotes$bent() && blendemotes$mesh != null) {
             MeshEmitter.emit(blendemotes$mesh.deform(blendemotes$bend, blendemotes$joint, blendemotes$buffer),
                     pose, consumer, light, overlay, color);
             ci.cancel();
@@ -112,7 +117,7 @@ public abstract class ModelPartMixin implements BendablePart {
     @Inject(method = "compile", at = @At("HEAD"), cancellable = true)
     private void blendemotes$compile(PoseStack.Pose pose, VertexConsumer consumer, int light, int overlay,
                                      float r, float g, float b, float a, CallbackInfo ci) {
-        if (blendemotes$active && blendemotes$bend != 0 && blendemotes$mesh != null) {
+        if (blendemotes$active && blendemotes$bent() && blendemotes$mesh != null) {
             MeshEmitter.emit(blendemotes$mesh.deform(blendemotes$bend, blendemotes$joint, blendemotes$buffer),
                     pose, consumer, light, overlay, MeshEmitter.argb(r, g, b, a));
             ci.cancel();

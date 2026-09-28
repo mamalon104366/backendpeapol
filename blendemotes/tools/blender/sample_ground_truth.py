@@ -14,12 +14,20 @@ Modos:
 
 Uso:
     blender -b emote_creator.blend -P sample_ground_truth.py -- --out truth.json
+    ... -- --out cantar_truth.json --actions cantar --mesh-frames 0,6.5,12 --models
+
+Con --models también guarda dónde quedan los vértices de los modelos de la acción (en el
+mismo orden que los escribe blendemotes_export.py).
 """
 
 import json
+import os
 import sys
 
 import bpy
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import blendemotes_export as exporter  # noqa: E402
 
 BONES = [
     "body", "body_control", "waist",
@@ -46,6 +54,7 @@ def args():
     out = "truth.json"
     actions = None
     mesh_frames = []
+    models = "--models" in argv
     for i, a in enumerate(argv):
         if a == "--out":
             out = argv[i + 1]
@@ -53,7 +62,7 @@ def args():
             actions = argv[i + 1].split(",")
         if a == "--mesh-frames":
             mesh_frames = [float(x) for x in argv[i + 1].split(",")]
-    return out, actions, mesh_frames
+    return out, actions, mesh_frames, models
 
 
 MESH_GROUPS = {
@@ -82,6 +91,32 @@ def sample_mesh(scene, frames):
         verts = [[part_of[i], rest[i], tuple(round(c, 6) for c in me.vertices[i].co)] for i in sorted(part_of)]
         ob.evaluated_get(dg).to_mesh_clear()
         out.append({"frame": f, "vertices": verts})
+    return out
+
+
+def sample_models(action, rig, scene, frames):
+    """Armature-space positions of the model vertices, per exported triangle corner."""
+    objects = exporter.model_objects(action, rig)
+    out = []
+    to_rig = rig.matrix_world.inverted()
+    for f in frames:
+        scene.frame_set(int(f), subframe=f - int(f))
+        dg = bpy.context.evaluated_depsgraph_get()
+        models = []
+        for ob in objects:
+            ev = ob.evaluated_get(dg)
+            me = ev.to_mesh()
+            me.calc_loop_triangles()
+            m = to_rig @ ob.matrix_world
+            groups = {}
+            for tri in me.loop_triangles:
+                pts = groups.setdefault(tri.material_index, [])
+                for v in tri.vertices:
+                    pts.append([round(c, 6) for c in (m @ me.vertices[v].co)])
+            ev.to_mesh_clear()
+            for pts in groups.values():
+                models.append({"object": ob.name, "vertices": pts})
+        out.append({"frame": f, "models": models})
     return out
 
 
@@ -118,7 +153,7 @@ def restore_constraints(rig, state):
 
 
 def main():
-    out, only, mesh_frames = args()
+    out, only, mesh_frames, with_models = args()
     text = bpy.data.texts.get("action_settings_panel.py")
     if not hasattr(bpy.types.Action, "emote"):
         text.as_module().register()
@@ -181,6 +216,7 @@ def main():
                 pb.scale = (1, 1, 1)
         export_frames = sample(rig, scene, start, end)
         mesh = sample_mesh(scene, mesh_frames) if mesh_frames else []
+        models = sample_models(action, rig, scene, mesh_frames or [start]) if with_models else []
         restore_constraints(rig, state)
         rig.animation_data.action = action
         rig.animation_data.action_slot = original_slot
@@ -188,7 +224,7 @@ def main():
 
         result["actions"][action.name] = {
             "start": start, "end": end, "vanilla": vanilla,
-            "export": export_frames, "rig": rig_frames, "mesh": mesh,
+            "export": export_frames, "rig": rig_frames, "mesh": mesh, "models": models,
         }
         print(f"{action.name}: {len(export_frames)} muestras (vanilla={vanilla})")
 

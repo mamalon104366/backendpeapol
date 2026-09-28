@@ -78,6 +78,28 @@ public final class RigDefinition {
         }
     }
 
+    /**
+     * Rest tilt (radians about X, Minecraft model space) of the Blender rig's bend bone for this
+     * part. A bend is the bend bone's own rotation, so its twist (Y) and sideways (Z) parts turn
+     * about these slightly tilted axes; the forwards/backwards part (X) is the same either way.
+     * The arm bend bones lean 0.95 degrees the other way than the upper arms, the leg bend bones
+     * 0.95 degrees forwards, and the torso's bend bone points up (half a turn about X).
+     */
+    public double blenderBendTilt(PlayerPart part) {
+        switch (part) {
+            case RIGHT_ARM:
+            case LEFT_ARM:
+                return -Math.atan2(0.025, 1.5);
+            case RIGHT_LEG:
+            case LEFT_LEG:
+                return Math.atan2(0.025, 1.5);
+            case TORSO:
+                return Math.PI;
+            default:
+                return 0;
+        }
+    }
+
     /** Item bones of the Blender rig point forward, so their Euler order maps to X, Z, Y. */
     public boolean blenderXzyOrder(PlayerPart part) {
         return part == PlayerPart.RIGHT_ITEM || part == PlayerPart.LEFT_ITEM;

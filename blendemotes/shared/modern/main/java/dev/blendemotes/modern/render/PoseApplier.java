@@ -88,8 +88,8 @@ public final class PoseApplier {
         b(part).blendemotes$setEmote(true, bend(pose, p), pose.joint(p), (float) t.scaleX, (float) t.scaleY, (float) t.scaleZ);
     }
 
-    private static double bend(PlayerPose pose, PlayerPart p) {
-        return p.bend != null && ModernEmotes.bendsEnabled() ? pose.bend(p) : 0;
+    private static Vec3 bend(PlayerPose pose, PlayerPart p) {
+        return p.bend != null && ModernEmotes.bendsEnabled() ? pose.bendVector(p) : Vec3.ZERO;
     }
 
     /** Writes an emote pose into a player or armour model. */

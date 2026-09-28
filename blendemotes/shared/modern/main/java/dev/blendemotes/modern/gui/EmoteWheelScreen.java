@@ -11,7 +11,9 @@ import dev.blendemotes.modern.ModernEmotes;
 import dev.blendemotes.modern.mixin.KeyMappingAccessor;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.resources.ResourceLocation;
+//#if MC < 260300
 import org.lwjgl.glfw.GLFW;
+//#endif
 
 /** Radial emote menu: hold the key, point at an emote, release to play it. */
 public class EmoteWheelScreen extends BaseScreen {
@@ -27,6 +29,24 @@ public class EmoteWheelScreen extends BaseScreen {
 
     private boolean keyHeld() {
         InputConstants.Key k = ((KeyMappingAccessor) key).blendemotes$getKey();
+        //#if MC >= 260300
+        if (k.getType() == InputConstants.Type.MOUSE) {
+            if (k.getValue() == InputConstants.MOUSE_BUTTON_LEFT) {
+                return minecraft.mouseHandler.isLeftPressed();
+            }
+            if (k.getValue() == InputConstants.MOUSE_BUTTON_RIGHT) {
+                return minecraft.mouseHandler.isRightPressed();
+            }
+            if (k.getValue() == InputConstants.MOUSE_BUTTON_MIDDLE) {
+                return minecraft.mouseHandler.isMiddlePressed();
+            }
+            return true; // other buttons: pick with a click
+        }
+        if (k.getValue() == InputConstants.UNKNOWN.getValue()) {
+            return true;
+        }
+        return InputConstants.isKeyDown(k.getValue());
+        //#else
         //#if MC >= 12109
         long window = minecraft.getWindow().handle();
         //#else
@@ -39,6 +59,7 @@ public class EmoteWheelScreen extends BaseScreen {
             return true;
         }
         return GLFW.glfwGetKey(window, k.getValue()) == GLFW.GLFW_PRESS;
+        //#endif
     }
 
     @Override
@@ -124,7 +145,11 @@ public class EmoteWheelScreen extends BaseScreen {
 
     @Override
     protected boolean key(int keyCode) {
+        //#if MC >= 260300
+        if (keyCode == InputConstants.KEY_TAB) {
+        //#else
         if (keyCode == GLFW.GLFW_KEY_TAB) {
+        //#endif
             done = true;
             Compat.setScreen(minecraft, new EmoteMenuScreen(null));
             return true;

@@ -17,7 +17,9 @@ public final class PoseMath {
     public static void mul(PoseStack stack, Mat4 m) {
         double[] d = m.decompose();
         stack.translate(d[0] / 16.0, d[1] / 16.0, d[2] / 16.0);
-        //#if MC >= 11903
+        //#if MC >= 260300
+        stack.rotate(new Quaternionf((float) d[3], (float) d[4], (float) d[5], (float) d[6]));
+        //#elseif MC >= 11903
         stack.mulPose(new Quaternionf((float) d[3], (float) d[4], (float) d[5], (float) d[6]));
         //#else
         stack.mulPose(new Quaternion((float) d[3], (float) d[4], (float) d[5], (float) d[6]));

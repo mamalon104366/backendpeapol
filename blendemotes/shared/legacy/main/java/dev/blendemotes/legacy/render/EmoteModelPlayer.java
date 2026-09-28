@@ -34,8 +34,8 @@ public class EmoteModelPlayer extends ModelPlayer {
         bipedBodyWear = part(16, 32, -4, 0, -2, 8, 12, 4, size + 0.25F, false, BendProfile.TORSO, 0, 0, 0);
         bipedRightArm = part(40, 16, slim ? -2 : -3, -2, -2, armW, 12, 4, size, false, BendProfile.ARM, -5, armY, 0);
         bipedRightArmwear = part(40, 32, slim ? -2 : -3, -2, -2, armW, 12, 4, size + 0.25F, false, BendProfile.ARM, -5, armY, 0);
-        bipedLeftArm = part(32, 48, -1, -2, -2, armW, 12, 4, size, false, BendProfile.ARM, 5, armY, 0);
-        bipedLeftArmwear = part(48, 48, -1, -2, -2, armW, 12, 4, size + 0.25F, false, BendProfile.ARM, 5, armY, 0);
+        bipedLeftArm = part(32, 48, -1, -2, -2, armW, 12, 4, size, false, BendProfile.LEFT_ARM, 5, armY, 0);
+        bipedLeftArmwear = part(48, 48, -1, -2, -2, armW, 12, 4, size + 0.25F, false, BendProfile.LEFT_ARM, 5, armY, 0);
         bipedRightLeg = part(0, 16, -2, 0, -2, 4, 12, 4, size, false, BendProfile.LEG, -1.9F, 12, 0);
         bipedRightLegwear = part(0, 32, -2, 0, -2, 4, 12, 4, size + 0.25F, false, BendProfile.LEG, -1.9F, 12, 0);
         bipedLeftLeg = part(16, 48, -2, 0, -2, 4, 12, 4, size, false, BendProfile.LEG, 1.9F, 12, 0);

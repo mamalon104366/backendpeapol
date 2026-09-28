@@ -44,6 +44,10 @@ public class EmoteCapeLayer implements LayerRenderer<AbstractClientPlayer> {
             vanilla.doRenderLayer(entity, limbSwing, limbSwingAmount, partialTicks, ageInTicks, netHeadYaw, headPitch, scale);
             return;
         }
+        if (!entity.isInvisible()) {
+            // the emote's models: every player renderer has this layer, already in the rig's space
+            EmoteModels.render(pose, scale);
+        }
         if (!entity.hasPlayerInfo() || entity.isInvisible() || !entity.isWearing(EnumPlayerModelParts.CAPE)
                 || entity.getLocationCape() == null) {
             return;
@@ -59,10 +63,12 @@ public class EmoteCapeLayer implements LayerRenderer<AbstractClientPlayer> {
         Vec3 pivot = pose.rig().pivot(PlayerPart.CAPE);
         Mat4 m = pose.matrix(PlayerPart.CAPE).mul(Mat4.translation(pivot.x, pivot.y, pivot.z));
         GlMatrix.mult(m, scale);
-        // the cape model is drawn turned around (like vanilla), so the bend axis flips
+        // the cape model is drawn turned around (like vanilla): half a turn about Y flips the
+        // bend's X and Z
         GlStateManager.rotate(180.0F, 0.0F, 1.0F, 0.0F);
         cape.emote = true;
-        cape.bend = EmoteSettings.bends() ? -pose.bend(PlayerPart.CAPE) : 0;
+        Vec3 bend = pose.bendVector(PlayerPart.CAPE);
+        cape.bend = EmoteSettings.bends() ? new Vec3(-bend.x, bend.y, -bend.z) : Vec3.ZERO;
         cape.setJoint(pose.joint(PlayerPart.CAPE));
         cape.draw(scale);
         GlStateManager.popMatrix();

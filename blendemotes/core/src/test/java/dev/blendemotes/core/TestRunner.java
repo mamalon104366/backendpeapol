@@ -25,6 +25,7 @@ public final class TestRunner {
                 "dev.blendemotes.core.anim.molang.MolangTest",
                 "dev.blendemotes.core.pose.BlenderGroundTruthTest",
                 "dev.blendemotes.core.pose.PoseTest",
+                "dev.blendemotes.core.pose.SidewaysBendAndModelsTest",
                 "dev.blendemotes.core.bend.BendMeshTest",
                 "dev.blendemotes.core.net.EmoteCodecTest",
                 "dev.blendemotes.core.emote.EmoteLibraryTest",

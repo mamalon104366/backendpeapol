@@ -10,10 +10,19 @@ package dev.blendemotes.core.rig;
  */
 public final class BendProfile {
     /**
-     * Elbow: 4 px below the shoulder pivot, the forearm (lower half) moves.
+     * Right elbow: 4 px below the shoulder pivot, the forearm (lower half) moves.
      * Weights measured on the Blender rig's mesh (distance below the shoulder -> forearm weight).
      */
     public static final BendProfile ARM = new BendProfile(4, 0,
+            new double[]{1.954, 2.848, 2.947, 3.121, 3.195, 3.394, 3.443, 3.667, 3.691, 3.940,
+                    4.188, 4.213, 4.436, 4.486, 4.684, 4.758, 4.932, 5.031, 5.924},
+            new double[]{0.0, 0.187, 0.187, 0.265, 0.265, 0.343, 0.343, 0.422, 0.422, 0.500,
+                    0.578, 0.578, 0.657, 0.657, 0.735, 0.735, 0.813, 0.813, 1.0});
+    /**
+     * The rig's left elbow is painted a little differently: its last ring above the forearm has
+     * only the bend bone's weight (no {@code left_arm}), so Blender normalizes it to 1.
+     */
+    public static final BendProfile LEFT_ARM = new BendProfile(4, 0,
             new double[]{1.954, 2.848, 2.947, 3.121, 3.195, 3.394, 3.443, 3.667, 3.691, 3.940,
                     4.188, 4.213, 4.436, 4.486, 4.684, 4.758, 4.932},
             new double[]{0.0, 0.187, 0.187, 0.265, 0.265, 0.343, 0.343, 0.422, 0.422, 0.500,
