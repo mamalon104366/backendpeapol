@@ -59,6 +59,14 @@ public class EmoteModelPlayer extends ModelPlayer {
         PoseWriter.clear(this);
         PoseWriter.resetRest(this, slim ? 2.5F : 2.0F);
         super.setRotationAngles(limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch, scale, entity);
+        // other mods' simple emotes (BlendEmotesApi.addPoseHook); a BlendEmotes emote below wins
+        dev.blendemotes.legacy.api.BlendEmotesApi.runPoseHooks(this, entity);
+        copyModelAngles(bipedHead, bipedHeadwear);
+        copyModelAngles(bipedLeftLeg, bipedLeftLegwear);
+        copyModelAngles(bipedRightLeg, bipedRightLegwear);
+        copyModelAngles(bipedLeftArm, bipedLeftArmwear);
+        copyModelAngles(bipedRightArm, bipedRightArmwear);
+        copyModelAngles(bipedBody, bipedBodyWear);
         if (entity != RenderContext.entity || !(entity instanceof AbstractClientPlayer) || LegacyEmotes.client() == null) {
             return;
         }

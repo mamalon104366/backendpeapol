@@ -30,6 +30,8 @@ public class EmoteArmorModel extends ModelBiped {
         PoseWriter.clear(this);
         PoseWriter.resetRest(this, 2.0F);
         super.setRotationAngles(limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch, scale, entity);
+        dev.blendemotes.legacy.api.BlendEmotesApi.runPoseHooks(this, entity);
+        copyModelAngles(bipedHead, bipedHeadwear);
         if (entity == RenderContext.entity && RenderContext.pose != null) {
             PoseWriter.apply(this, RenderContext.pose);
         }

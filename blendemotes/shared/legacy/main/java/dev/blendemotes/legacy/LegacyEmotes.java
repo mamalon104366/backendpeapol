@@ -5,6 +5,7 @@ import dev.blendemotes.core.client.ClientPlatform;
 import dev.blendemotes.core.client.LocalInput;
 import dev.blendemotes.core.emote.BuiltinEmotes;
 import dev.blendemotes.core.emote.EmoteLibrary;
+import dev.blendemotes.legacy.api.BlendEmotesApi;
 import dev.blendemotes.legacy.gui.EmoteMenuScreen;
 import dev.blendemotes.legacy.gui.EmoteWheelScreen;
 import dev.blendemotes.legacy.render.EmoteRenderPlayer;
@@ -122,6 +123,22 @@ public final class LegacyEmotes {
         // pick up the saved key codes of the new bindings
         mc.gameSettings.loadOptions();
         KeyBinding.resetKeyBindingArrayAndHash();
+        if (!BlendEmotesApi.ownKeysEnabled()) {
+            applyOwnKeys(false);
+        }
+    }
+
+    /**
+     * Another mod shows BlendEmotes emotes in its own wheel: the wheel and menu keys are left unbound
+     * (in 1.8.9 two bindings on one key cannot both fire). Enabling gives them back their defaults.
+     */
+    public static void applyOwnKeys(boolean enabled) {
+        if (keyWheel == null || keyMenu == null) {
+            return; // registerKeys reads the flag
+        }
+        keyWheel.setKeyCode(enabled ? keyWheel.getKeyCodeDefault() : Keyboard.KEY_NONE);
+        keyMenu.setKeyCode(enabled ? keyMenu.getKeyCodeDefault() : Keyboard.KEY_NONE);
+        KeyBinding.resetKeyBindingArrayAndHash();
     }
 
     /** Replaces the player renderers; needs the RenderManager, so it runs on the first tick. */
@@ -205,10 +222,10 @@ public final class LegacyEmotes {
         client.tick(player != null && mc.currentScreen == null ? INPUT : null);
 
         if (mc.currentScreen == null && player != null) {
-            if (keyWheel.isPressed()) {
+            if (BlendEmotesApi.ownKeysEnabled() && keyWheel.isPressed()) {
                 mc.displayGuiScreen(new EmoteWheelScreen(keyWheel.getKeyCode()));
             }
-            if (keyMenu.isPressed()) {
+            if (BlendEmotesApi.ownKeysEnabled() && keyMenu.isPressed()) {
                 mc.displayGuiScreen(new EmoteMenuScreen(null));
             }
             if (keyStop.isPressed()) {
