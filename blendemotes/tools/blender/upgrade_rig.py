@@ -17,6 +17,8 @@ El .blend original no se toca: se guarda uno nuevo. Qué cambia:
     Piernas, Manos y pies, IK, Objetos) y el mecanismo interno oculto. Con el IK de una
     extremidad encendido se ven su mano/pie de IK y su polo; apagado, sus huesos normales (así
     nunca hay un hueso a la vista que no haga nada).
+  * **Plantilla con las piernas en FK.** La acción "emote" (la plantilla vacía) traía las piernas
+    en IK; ahora se ven sus dos huesos, igual que en los brazos.
   * **Panel "BlendEmotes"** en la barra lateral del visor 3D (tecla N): interruptores de IK de
     cada brazo y pierna.
   * **Exportador.** El botón *Export* usa `blendemotes_export.py` (doblez lateral, palma, pie,
@@ -196,6 +198,28 @@ def add_drivers(rig):
             _driver(arm.bones[bone], "hide", "ik >= 0.5", [("ik", rig, path)])
         for bone in IK_CONTROLS[part]:
             _driver(arm.bones[bone], "hide", "ik < 0.5", [("ik", rig, path)])
+
+
+def template_legs_fk(rig):
+    """La acción plantilla del rig ("emote", un solo fotograma en reposo) traía las piernas en IK:
+    al abrir el archivo solo se veían el cubo del pie y el polo, no los dos huesos de la pierna.
+    Se deja en FK, como los brazos (las acciones de ejemplo que usan IK no se tocan)."""
+    from bpy_extras import anim_utils
+    action = bpy.data.actions.get("emote")
+    if action is None or len(action.slots) == 0:
+        return
+    bag = anim_utils.action_get_channelbag_for_slot(action, action.slots[0])
+    if bag is None:
+        return
+    for prop in ("rightLeg IK", "leftLeg IK"):
+        fc = bag.fcurves.find(f'pose.bones["settings"]["{prop}"]')
+        if fc is not None:
+            for key in fc.keyframe_points:
+                key.co.y = 0.0
+                key.handle_left.y = 0.0
+                key.handle_right.y = 0.0
+            fc.update()
+        rig.pose.bones["settings"][prop] = 0.0
 
 
 def grey_bones(rig):
@@ -392,6 +416,7 @@ def upgrade(rig):
     if first_time:
         paint_tip_weights(mesh_ob)
     add_drivers(rig)
+    template_legs_fk(rig)
     grey_bones(rig)
     organise_collections(rig)
     upgrade_scripts()
