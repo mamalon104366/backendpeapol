@@ -13,6 +13,9 @@ Usa las funciones de exportación que trae el rig (`collect_animation_data.py` y
     `bend` se escribe como `"vector": [x, y, z]` (grados, la rotación del hueso de doblez sobre
     sus propios ejes). Si solo se dobla hacia delante/atrás se escribe `"value"` como siempre
     (compatible con Emotecraft).
+  * **Palma y pie.** Los huesos `right_hand` / `left_hand` (palma) y `right_foot` / `left_foot`
+    (pie) se escriben como el canal `tip` de su brazo/pierna: `"tip": {"vector": [x, y, z]}`
+    (grados, la rotación del hueso sobre sus propios ejes, iguales a los del hueso de doblez).
   * **Modelos.** Los objetos de malla de la colección de modelos de la acción, emparentados a
     un hueso del rig, viajan con el emote (micrófono, guitarra, caballo...). Se escriben en
     `"blendemotes": {"models": [...]}` con su textura.
@@ -30,7 +33,7 @@ import zlib
 
 import bpy
 
-EXPORTER_VERSION = "1.1"
+EXPORTER_VERSION = "1.2"
 TIME_DECIMALS = 6
 RIG_NAME = "export_armature"
 DEFAULT_EXPORT_BONES = [
@@ -42,10 +45,12 @@ DEFAULT_EXPORT_BONES = [
     "left_item", "right_item",
 ]
 BENDABLE = ["left_arm", "right_arm", "left_leg", "right_leg", "torso", "cape"]
+# Palma y pie de cada extremidad (rig de BlendEmotes 1.2+).
+TIPS = {"right_arm": "right_hand", "left_arm": "left_hand", "right_leg": "right_foot", "left_leg": "left_foot"}
 # Bones the mod knows by name (they need no pivot in the file).
 DEFAULT_BONES = ["body", "head", "left_arm", "left_leg", "right_arm", "right_leg", "torso", "left_arm_bend",
                  "left_leg_bend", "right_arm_bend", "right_leg_bend", "torso_bend", "right_item", "left_item",
-                 "cape", "cape_bend"]
+                 "cape", "cape_bend"] + list(TIPS.values())
 # A bend axis whose keys all stay below this (degrees) counts as not animated.
 BEND_EPSILON = 1e-3
 
@@ -190,6 +195,122 @@ def patch_exporter(bedrock):
     bedrock.fcurves_to_mode_dict = fcurves_to_mode_dict
 
 
+MECHANISM_SUFFIXES = ("_vanilla", "_vanilla_crutch")
+
+
+def reset_mechanism(rig):
+    """Los huesos auxiliares del modo vanilla (`*_vanilla`, `*_vanilla_crutch`) no se animan: los
+    mueven sus restricciones. El horneado de Blender les deja la pose visual como pose propia y,
+    como sus restricciones se aplican encima, cada exportación los desplazaba un poco más (el
+    rig original exportaba distinto cada vez). Se dejan en reposo antes de hornear."""
+    for pb in rig.pose.bones:
+        if pb.name.endswith(MECHANISM_SUFFIXES):
+            pb.location = (0.0, 0.0, 0.0)
+            pb.rotation_quaternion = (1.0, 0.0, 0.0, 0.0)
+            pb.rotation_euler = (0.0, 0.0, 0.0)
+            pb.rotation_axis_angle = (0.0, 0.0, 1.0, 0.0)
+            pb.scale = (1.0, 1.0, 1.0)
+
+
+def reset_pose(rig):
+    """Toda la pose en reposo. Los canales sin claves conservan lo que dejó la última acción que se
+    vio en Blender; así lo que se exporta (y lo que se muestrea para las pruebas) depende solo de
+    la acción."""
+    for pb in rig.pose.bones:
+        pb.location = (0.0, 0.0, 0.0)
+        pb.rotation_quaternion = (1.0, 0.0, 0.0, 0.0)
+        pb.rotation_euler = (0.0, 0.0, 0.0)
+        pb.rotation_axis_angle = (0.0, 0.0, 1.0, 0.0)
+        pb.scale = (1.0, 1.0, 1.0)
+
+
+def snapshot_pose(rig):
+    return {pb.name: (pb.location.copy(), pb.rotation_quaternion.copy(), pb.rotation_euler.copy(),
+                      tuple(pb.rotation_axis_angle), pb.scale.copy()) for pb in rig.pose.bones}
+
+
+def restore_pose(rig, snapshot):
+    for pb in rig.pose.bones:
+        loc, quat, euler, axis_angle, scale = snapshot[pb.name]
+        pb.location = loc
+        pb.rotation_quaternion = quat
+        pb.rotation_euler = euler
+        pb.rotation_axis_angle = axis_angle
+        pb.scale = scale
+
+
+LIMBS = ["left_arm", "right_arm", "left_leg", "right_leg"]
+
+
+def baked_bones(rig, export_bones):
+    """Huesos que hornea `collect_animation_data` (añade los de doblez y los del modo vanilla)."""
+    names = list(export_bones)
+    names += [b + "_bend" for b in BENDABLE] + [b + "_vanilla" for b in LIMBS]
+    return [n for n in dict.fromkeys(names) if n in rig.pose.bones]
+
+
+class keyed_source:
+    """Acción de la que exporta el rig: una copia de la acción con una clave (el valor que ya tiene la
+    pose, así que no cambia nada) en cada canal de los huesos exportados que no tenía ninguna.
+
+    El exportador del rig solo mezcla lo horneado en canales que ya tienen curva: un hueso movido
+    solo por el IK o por una restricción (la pierna cuando solo se mueve el cubo del pie) salía
+    congelado. Después de hornear, `prune` quita esas claves donde el horneado no añadió
+    movimiento, para que un canal sin animar siga sin animar (en el juego sigue la pose normal del
+    jugador). La acción original no se toca: la copia ocupa su nombre mientras dura la exportación.
+    """
+
+    def __init__(self, rig, action, bones):
+        self.rig = rig
+        self.action = action
+        self.bones = bones
+        self.name = action.name
+        self.copy = None
+        self.created = []
+
+    def __enter__(self):
+        from bpy_extras import anim_utils
+        rig, action = self.rig, self.action
+        frame = int(action.frame_start) if action.use_frame_range else 0
+        self.copy = action.copy()
+        action.name = self.name + ".blendemotes_original"
+        self.copy.name = self.name
+        rig.animation_data.action = self.copy
+        slot = rig.animation_data.action_slot
+        if slot is None:
+            suitable = list(getattr(rig.animation_data, "action_suitable_slots", []))
+            slot = suitable[0] if suitable else (self.copy.slots[0] if len(self.copy.slots) else None)
+            rig.animation_data.action_slot = slot
+        bag = anim_utils.action_get_channelbag_for_slot(self.copy, slot)
+        for name in self.bones:
+            pb = self.rig.pose.bones[name]
+            for prop in ("location", "rotation_euler", "scale"):
+                path = f'pose.bones["{name}"].{prop}'
+                values = getattr(pb, prop)
+                for index in range(3):
+                    if bag.fcurves.find(path, index=index) is None:
+                        fc = bag.fcurves.new(path, index=index, group_name=name)
+                        fc.keyframe_points.insert(frame, values[index])
+                        self.created.append((name, prop, index))
+        return self
+
+    def prune(self, animation_data):
+        """Quita de los datos recogidos los canales añadidos en los que no se mezcló nada horneado."""
+        modes = {"location": "position", "rotation_euler": "rotation", "scale": "scale"}
+        for name, prop, index in self.created:
+            curves = animation_data.get(name, {}).get(modes[prop])
+            if curves and index < len(curves) and curves[index] is not None and len(curves[index].keyframe_points) <= 1:
+                curves[index] = None
+
+    def __exit__(self, *exc):
+        self.rig.animation_data.action = self.action
+        if self.copy is not None:
+            bpy.data.actions.remove(self.copy)
+        self.action.name = self.name
+        assign_action(self.rig, self.action)
+        return False
+
+
 def load_exporter():
     collect = bpy.data.texts['collect_animation_data.py'].as_module()
     bedrock = bpy.data.texts['set_up_bedrock.py'].as_module()
@@ -219,6 +340,32 @@ def write_bend_vectors(anim, animation_data, rig, bedrock, export_bones):
         vec = bedrock.write_mode(f"{bone}_bendvec", "rotation", fake, rig, DEFAULT_BONES, export_bones)
         if vec:
             anim["bones"].setdefault(bone, {})["bend"] = vec
+
+
+def write_tip_vectors(anim, animation_data, rig, bedrock, export_bones):
+    """La palma y el pie van en el canal `tip` de su brazo/pierna, como vector [x, y, z]."""
+    for part, tip in TIPS.items():
+        data = animation_data.get(tip)
+        if not data or "rotation" not in data:
+            continue
+        curves = data["rotation"]
+        if not any(_moves(c) for c in curves[:3]):
+            continue  # recta todo el emote: no se escribe
+        fake = {f"{tip}_bendvec": {"rotation": curves}}
+        vec = bedrock.write_mode(f"{tip}_bendvec", "rotation", fake, rig, DEFAULT_BONES, export_bones)
+        if vec:
+            anim["bones"].setdefault(part, {})["tip"] = vec
+
+
+def strip_tip_bones(anim):
+    """El exportador del rig escribe la palma y el pie como huesos sueltos: se quitan (van en `tip`)."""
+    tips = set(TIPS.values())
+    for tip in tips:
+        anim.get("bones", {}).pop(tip, None)
+        anim.get("model", {}).pop(tip, None)
+    parents = anim.get("parents", {})
+    for bone in [b for b, p in parents.items() if b in tips or p in tips]:
+        del parents[bone]
 
 
 # ---------------------------------------------------------------------------- models
@@ -405,14 +552,28 @@ def export_action(rig, action, out_dir, with_icon=True, default_author=None, ico
         if base not in export_bones and bone not in DEFAULT_BONES:
             export_bones.append(bone)
 
+    # la palma y el pie se hornean con el resto y luego se escriben en el canal `tip`
+    for tip in TIPS.values():
+        if tip in rig.data.bones and tip not in export_bones:
+            export_bones.append(tip)
+
+    action_name = action.name
     preview_frame = scene.frame_current
+    pose_before = snapshot_pose(rig)
+    reset_pose(rig)
     scene.frame_set(0)
-    animation_data, work_action = collect_animation_data(rig, export_bones)
-    emote = bedrock.create_emote(rig, export_bones, animation_data)
-    anim = emote["animations"][action.name]
-    if not rig.pose.bones["settings"]["vanilla"]:
-        write_bend_vectors(anim, animation_data, rig, bedrock, export_bones)
-    bpy.data.actions.remove(work_action)
+    with keyed_source(rig, action, baked_bones(rig, export_bones)) as source:
+        animation_data, work_action = collect_animation_data(rig, export_bones)
+        source.prune(animation_data)
+        restore_pose(rig, pose_before)
+        reset_mechanism(rig)
+        emote = bedrock.create_emote(rig, export_bones, animation_data)
+        anim = emote["animations"][action_name]
+        strip_tip_bones(anim)
+        if not rig.pose.bones["settings"]["vanilla"]:
+            write_bend_vectors(anim, animation_data, rig, bedrock, export_bones)
+            write_tip_vectors(anim, animation_data, rig, bedrock, export_bones)
+        bpy.data.actions.remove(work_action)
 
     # padres de los huesos propios que cuelgan de un hueso normal del rig (el exportador del rig
     # solo apunta los hijos de los huesos propios)

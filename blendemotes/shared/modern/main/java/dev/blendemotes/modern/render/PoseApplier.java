@@ -86,6 +86,11 @@ public final class PoseApplier {
         part.yRot = (float) t.yaw;
         part.zRot = (float) t.roll;
         b(part).blendemotes$setEmote(true, bend(pose, p), pose.joint(p), (float) t.scaleX, (float) t.scaleY, (float) t.scaleZ);
+        b(part).blendemotes$setTip(tip(pose, p), pose.tipJoint(p));
+    }
+
+    private static Vec3 tip(PlayerPose pose, PlayerPart p) {
+        return p.bend != null && ModernEmotes.bendsEnabled() ? pose.tipVector(p) : Vec3.ZERO;
     }
 
     private static Vec3 bend(PlayerPose pose, PlayerPart p) {
@@ -128,6 +133,7 @@ public final class PoseApplier {
     //#if MC >= 12102
     private static void layer(ModelPart part, PlayerPose pose, PlayerPart p) {
         b(part).blendemotes$setEmote(true, bend(pose, p), pose.joint(p), 1, 1, 1);
+        b(part).blendemotes$setTip(tip(pose, p), pose.tipJoint(p));
     }
     //#endif
 

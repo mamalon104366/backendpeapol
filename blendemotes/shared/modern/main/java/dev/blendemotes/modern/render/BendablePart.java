@@ -13,6 +13,13 @@ public interface BendablePart {
     /** Emote state for this frame. */
     void blendemotes$setEmote(boolean active, Vec3 bend, Vec3 joint, float sx, float sy, float sz);
 
+    /** Turn of the hand/foot about the wrist/ankle (rotation vector, radians, part-local), and where it is. */
+    void blendemotes$setTip(Vec3 tip, Vec3 tipJoint);
+
+    Vec3 blendemotes$tip();
+
+    Vec3 blendemotes$tipJoint();
+
     boolean blendemotes$active();
 
     /** True while an emote changed the part since its last reset. */

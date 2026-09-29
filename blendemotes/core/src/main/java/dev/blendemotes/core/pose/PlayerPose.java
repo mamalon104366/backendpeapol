@@ -37,6 +37,7 @@ public final class PlayerPose {
     private final Map<PlayerPart, Mat4> matrices = new EnumMap<PlayerPart, Mat4>(PlayerPart.class);
     private final Map<PlayerPart, PartTransform> transforms = new EnumMap<PlayerPart, PartTransform>(PlayerPart.class);
     private final Vec3[] bends = new Vec3[PlayerPart.VALUES.length];
+    private final Vec3[] tips = new Vec3[PlayerPart.VALUES.length];
     /** Matrices of the bones models hang from, by bone name (rest model -> posed, like parts). */
     private final Map<String, Mat4> bones = new LinkedHashMap<String, Mat4>();
     /** Rest pivot of each of those bones (model space), used to blend them smoothly. */
@@ -50,6 +51,7 @@ public final class PlayerPose {
             matrices.put(p, new Mat4());
             transforms.put(p, new PartTransform(p.defaultPivot.x, p.defaultPivot.y, p.defaultPivot.z, 0, 0, 0));
             bends[p.ordinal()] = Vec3.ZERO;
+            tips[p.ordinal()] = Vec3.ZERO;
         }
     }
 
@@ -68,6 +70,19 @@ public final class PlayerPose {
      */
     public Vec3 bendVector(PlayerPart part) {
         return bends[part.ordinal()];
+    }
+
+    /**
+     * Turn of the hand (arms) or foot (legs) about the wrist/ankle as a rotation vector (radians,
+     * part-local, rest pose); zero for other parts.
+     */
+    public Vec3 tipVector(PlayerPart part) {
+        return tips[part.ordinal()];
+    }
+
+    /** Wrist/ankle (part-local, rest pose). */
+    public Vec3 tipJoint(PlayerPart part) {
+        return rig.tipJoint(part);
     }
 
     /** True when the part is bent at all. */
@@ -119,8 +134,13 @@ public final class PlayerPose {
     }
 
     void setPart(PlayerPart part, Mat4 m, Vec3 bend) {
+        setPart(part, m, bend, Vec3.ZERO);
+    }
+
+    void setPart(PlayerPart part, Mat4 m, Vec3 bend, Vec3 tip) {
         matrices.get(part).set(m);
         bends[part.ordinal()] = bend == null ? Vec3.ZERO : bend;
+        tips[part.ordinal()] = tip == null ? Vec3.ZERO : tip;
         updateTransform(part);
     }
 
@@ -160,7 +180,7 @@ public final class PlayerPose {
         root.set(other.root);
         rig = other.rig;
         for (PlayerPart p : PlayerPart.VALUES) {
-            setPart(p, other.matrix(p), other.bendVector(p));
+            setPart(p, other.matrix(p), other.bendVector(p), other.tipVector(p));
         }
         bones.clear();
         for (Map.Entry<String, Mat4> e : other.bones.entrySet()) {
@@ -189,7 +209,7 @@ public final class PlayerPose {
         out.root.set(blendMatrix(a.root, b.root, b.rig.bodyPivot, weight));
         for (PlayerPart p : PlayerPart.VALUES) {
             Mat4 m = blendMatrix(a.matrix(p), b.matrix(p), b.rig.pivot(p), weight);
-            out.setPart(p, m, a.bendVector(p).lerp(b.bendVector(p), weight));
+            out.setPart(p, m, a.bendVector(p).lerp(b.bendVector(p), weight), a.tipVector(p).lerp(b.tipVector(p), weight));
         }
         Map<String, Mat4> blended = new LinkedHashMap<String, Mat4>();
         for (Map.Entry<String, Mat4> e : b.bones.entrySet()) {

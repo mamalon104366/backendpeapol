@@ -32,6 +32,35 @@ public enum PlayerPart {
         this.bend = bend;
     }
 
+    /**
+     * Name of the rig's hand (arms) or foot (legs) bone, whose rotation turns the end of the part;
+     * null for parts without one.
+     */
+    public String tipBone() {
+        switch (this) {
+            case RIGHT_ARM:
+                return "right_hand";
+            case LEFT_ARM:
+                return "left_hand";
+            case RIGHT_LEG:
+                return "right_foot";
+            case LEFT_LEG:
+                return "left_foot";
+            default:
+                return null;
+        }
+    }
+
+    /** The part whose hand/foot bone this is ("right_hand" -> RIGHT_ARM), or null. */
+    public static PlayerPart byTipBone(String bone) {
+        for (PlayerPart p : VALUES) {
+            if (bone.equals(p.tipBone())) {
+                return p;
+            }
+        }
+        return null;
+    }
+
     public boolean isItem() {
         return this == RIGHT_ITEM || this == LEFT_ITEM;
     }

@@ -1,16 +1,19 @@
 # Minecraft versions built by CI, and the loaders tested in game (self-test).
 # <minecraft> <loaders...>
+# loader! = only the release jar on the real loader (prod job), no development-run self-test:
+# Forge 1.20.3+ does not boot inside Unimined's development run (it expects its own module layout);
+# the same jars do boot on the real Forge.
 1.8.9    forge fabric
 1.12.2   forge fabric
 1.16.5   forge fabric
 1.18.2   forge fabric
 1.19.2   forge fabric
 1.20.1   forge fabric
-1.20.4   forge fabric neoforge
-1.21.1   forge fabric neoforge
-1.21.4   forge fabric neoforge
-1.21.8   forge fabric neoforge
-1.21.10  forge fabric neoforge
-1.21.11  forge fabric neoforge
-26.1.2   forge fabric neoforge
-26.3     forge fabric neoforge
+1.20.4   forge! fabric neoforge
+1.21.1   forge! fabric neoforge
+1.21.4   forge! fabric neoforge
+1.21.8   forge! fabric neoforge
+1.21.10  forge! fabric neoforge
+1.21.11  forge! fabric neoforge
+26.1.2   forge! fabric neoforge
+26.3     forge! fabric neoforge

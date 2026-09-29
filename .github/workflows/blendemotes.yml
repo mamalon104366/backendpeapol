@@ -153,12 +153,15 @@ jobs:
       - name: Unimined plugin (pinned lts/1.4 build)
         run: bash tools/unimined/build.sh
       - name: Install virtual display
-        run: sudo apt-get update -q && sudo apt-get install -y -q xvfb x11-xserver-utils libgl1-mesa-dri libglx-mesa0 mesa-utils libxrandr2 libxcursor1 libxi6 libxxf86vm1 libopenal1 imagemagick
+        run: sudo apt-get update -q && sudo apt-get install -y -q xvfb x11-xserver-utils libgl1-mesa-dri libglx-mesa0 mesa-utils libegl1 libegl-mesa0 mesa-vulkan-drivers libvulkan1 libxrandr2 libxcursor1 libxi6 libxxf86vm1 libopenal1 imagemagick
       - name: Compile
         run: ./gradlew -PmcVersions=${{ matrix.mc }} :mc-${{ matrix.mc }}:${{ matrix.loader }}Classes --console=plain
       - name: Run Minecraft self-test
         env:
           LIBGL_ALWAYS_SOFTWARE: "1"
+          # 26.3 opens its window through SDL3: EGL finds a context on the virtual display where GLX
+          # does not ("Couldn't find matching GLX visual"); software Vulkan (lavapipe) is its fallback
+          SDL_VIDEO_FORCE_EGL: "1"
           BLENDEMOTES_SELFTEST: "1"
         run: |
           timeout 1500 xvfb-run -a -s "-screen 0 1280x720x24" ./gradlew -PmcVersions=${{ matrix.mc }} :mc-${{ matrix.mc }}:${{ matrix.loader }}RunClient -Pselftest --console=plain > selftest.log 2>&1 || echo "run exited with $?"
@@ -240,11 +243,14 @@ jobs:
           distribution: temurin
           java-version: ${{ matrix.java }}
       - name: Install virtual display
-        run: sudo apt-get update -q && sudo apt-get install -y -q xvfb x11-xserver-utils libgl1-mesa-dri libglx-mesa0 libxrandr2 libxcursor1 libxi6 libxxf86vm1 libopenal1 imagemagick
+        run: sudo apt-get update -q && sudo apt-get install -y -q xvfb x11-xserver-utils libgl1-mesa-dri libglx-mesa0 libegl1 libegl-mesa0 mesa-vulkan-drivers libvulkan1 libxrandr2 libxcursor1 libxi6 libxxf86vm1 libopenal1 imagemagick
       - name: Run the game with the release jar
         uses: headlesshq/mc-runtime-test@4.5.1
         env:
           LIBGL_ALWAYS_SOFTWARE: "1"
+          # 26.3 opens its window through SDL3: EGL finds a context on the virtual display where GLX
+          # does not ("Couldn't find matching GLX visual"); software Vulkan (lavapipe) is its fallback
+          SDL_VIDEO_FORCE_EGL: "1"
           BLENDEMOTES_SELFTEST: "1"
         with:
           mc: ${{ matrix.mc }}
@@ -257,14 +263,13 @@ jobs:
       - name: Check the self-test
         if: always()
         run: |
-          # Forge 1.8.9-1.12.2 logs the client to fml-client-latest.log
-          logs=$(ls run/logs/*.log 2>/dev/null || true)
-          echo "logs: $logs"
-          [ -n "$logs" ] || exit 1
-          grep -h -E "selftest|BlendEmotes" $logs | head -100 || true
+          # every log of the game: Forge 1.8.9-1.12.2 writes the client to its own file (under
+          # HeadlessMC its name even has spaces), so the folder is searched instead of listed
+          ls -la run/logs || true
+          grep -rh --include="*.log" -E "selftest|BlendEmotes" run/logs | head -100 || true
           echo "----- exceptions with context -----"
-          grep -n -B4 -A20 -E "Exception|FATAL|Mixin apply failed|InvalidInjection" $logs | cut -c1-400 | head -300 || true
-          grep -q BLENDEMOTES_SELFTEST_DONE $logs
+          grep -rn --include="*.log" -B4 -A20 -E "Exception|FATAL|Mixin apply failed|InvalidInjection" run/logs | cut -c1-400 | head -300 || true
+          grep -rq --include="*.log" BLENDEMOTES_SELFTEST_DONE run/logs
       - name: Contact sheet
         if: always()
         run: |

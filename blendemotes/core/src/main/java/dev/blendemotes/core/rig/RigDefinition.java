@@ -18,11 +18,14 @@ public final class RigDefinition {
     public final Vec3 bodyPivot;
     private final Map<PlayerPart, Vec3> pivots;
     private final Map<PlayerPart, Vec3> joints;
+    private final Map<PlayerPart, Vec3> tipJoints;
 
-    private RigDefinition(Vec3 bodyPivot, Map<PlayerPart, Vec3> pivots, Map<PlayerPart, Vec3> joints) {
+    private RigDefinition(Vec3 bodyPivot, Map<PlayerPart, Vec3> pivots, Map<PlayerPart, Vec3> joints,
+                          Map<PlayerPart, Vec3> tipJoints) {
         this.bodyPivot = bodyPivot;
         this.pivots = pivots;
         this.joints = joints;
+        this.tipJoints = tipJoints;
     }
 
     public static final RigDefinition MINECRAFT;
@@ -33,17 +36,21 @@ public final class RigDefinition {
     static {
         Map<PlayerPart, Vec3> mc = new EnumMap<PlayerPart, Vec3>(PlayerPart.class);
         Map<PlayerPart, Vec3> mcJoints = new EnumMap<PlayerPart, Vec3>(PlayerPart.class);
+        Map<PlayerPart, Vec3> mcTips = new EnumMap<PlayerPart, Vec3>(PlayerPart.class);
         for (PlayerPart p : PlayerPart.VALUES) {
             mc.put(p, p.defaultPivot);
             if (p.bend != null) {
                 mcJoints.put(p, new Vec3(0, p.bend.jointY, p.bend.jointZ));
+                if (p.bend.tip != null) {
+                    mcTips.put(p, new Vec3(0, p.bend.tip.jointY, p.bend.tip.jointZ));
+                }
             }
         }
-        MINECRAFT = new RigDefinition(new Vec3(0, 12, 0), mc, mcJoints);
+        MINECRAFT = new RigDefinition(new Vec3(0, 12, 0), mc, mcJoints, mcTips);
         Map<PlayerPart, Vec3> slim = new EnumMap<PlayerPart, Vec3>(mc);
         slim.put(PlayerPart.RIGHT_ARM, new Vec3(-5, 2.5, 0));
         slim.put(PlayerPart.LEFT_ARM, new Vec3(5, 2.5, 0));
-        MINECRAFT_SLIM = new RigDefinition(new Vec3(0, 12, 0), slim, mcJoints);
+        MINECRAFT_SLIM = new RigDefinition(new Vec3(0, 12, 0), slim, mcJoints, mcTips);
 
         // bone heads of emote_creator.blend (rig 2.0) converted to Minecraft model space:
         // mc = (4x, 24 - 4z, 4y)
@@ -57,7 +64,13 @@ public final class RigDefinition {
         blJoints.put(PlayerPart.RIGHT_LEG, new Vec3(0, 6, -0.1));
         blJoints.put(PlayerPart.LEFT_LEG, new Vec3(0, 6, -0.1));
         blJoints.put(PlayerPart.CAPE, new Vec3(0, 6, 0));
-        BLENDER = new RigDefinition(new Vec3(0, 12, 0), bl, blJoints);
+        // the hand and foot bones start on the bend bones' axis (which lean 0.1 px over their 6 px)
+        Map<PlayerPart, Vec3> blTips = new EnumMap<PlayerPart, Vec3>(mcTips);
+        blTips.put(PlayerPart.RIGHT_ARM, new Vec3(0, 7, 0.05));
+        blTips.put(PlayerPart.LEFT_ARM, new Vec3(0, 7, 0.05));
+        blTips.put(PlayerPart.RIGHT_LEG, new Vec3(0, 9, -0.05));
+        blTips.put(PlayerPart.LEFT_LEG, new Vec3(0, 9, -0.05));
+        BLENDER = new RigDefinition(new Vec3(0, 12, 0), bl, blJoints, blTips);
     }
 
     /**
@@ -116,6 +129,12 @@ public final class RigDefinition {
     /** Joint offset relative to the part pivot (part-local, rest pose). */
     public Vec3 joint(PlayerPart part) {
         Vec3 j = joints.get(part);
+        return j == null ? Vec3.ZERO : j;
+    }
+
+    /** Wrist (arms) or ankle (legs) relative to the part pivot (part-local, rest pose). */
+    public Vec3 tipJoint(PlayerPart part) {
+        Vec3 j = tipJoints.get(part);
         return j == null ? Vec3.ZERO : j;
     }
 

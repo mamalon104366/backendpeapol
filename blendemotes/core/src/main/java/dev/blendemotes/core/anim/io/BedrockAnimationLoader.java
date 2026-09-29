@@ -87,11 +87,12 @@ public final class BedrockAnimationLoader {
         Map<String, Object> bonesObj = JsonUtil.getObject(anim, "bones");
         for (Map.Entry<String, Object> b : bonesObj.entrySet()) {
             Map<String, Object> boneObj = JsonUtil.asObject(b.getValue(), "bone '" + b.getKey() + "'");
-            BoneAnimation bone = BoneAnimation.withBendAxes(
+            BoneAnimation bone = BoneAnimation.of(
                     readVectorChannel(boneObj.get("position"), false),
                     readVectorChannel(boneObj.get("rotation"), false),
                     readVectorChannel(boneObj.get("scale"), true),
-                    readBendChannel(boneObj.get("bend")));
+                    readBendChannel(boneObj.get("bend")),
+                    readBendChannel(boneObj.get("tip")));
             if (!bone.isEmpty()) {
                 bones.put(normalizeBoneName(b.getKey()), bone);
             }
@@ -350,7 +351,8 @@ public final class BedrockAnimationLoader {
     /**
      * The bend channel: {@code "value"} (or a plain number) is the classic forwards/backwards
      * bend; {@code "vector": [x, y, z]} also twists the lower half (y) or bends it sideways (z).
-     * Per-axis easings may be given as easingX/Y/Z, like the other channels.
+     * Per-axis easings may be given as easingX/Y/Z, like the other channels. The hand/foot channel
+     * ({@code "tip"}) has the same shape.
      */
     private static Track[] readBendChannel(Object channel) {
         List<RawKey> raw = readRawKeys(channel, true);

@@ -37,12 +37,22 @@ BONES = [
     "left_leg", "left_leg_bend",
     "right_leg", "right_leg_bend",
 ]
+# palma y pie (rig de BlendEmotes 1.2+)
+TIP_BONES = ["right_hand", "left_hand", "right_foot", "left_foot"]
 EXPORT_BONES = [
     "body", "body_control", "head", "left_arm", "right_arm", "left_leg", "right_leg",
     "waist", "torso", "cape", "left_item", "right_item",
 ]
 BEND_BONES = ["left_arm_bend", "right_arm_bend", "left_leg_bend", "right_leg_bend", "torso_bend", "cape_bend"]
 SUBFRAMES = (0.0, 0.25, 0.5, 0.75)
+
+
+def bones_of(rig):
+    return BONES + [b for b in TIP_BONES if b in rig.pose.bones]
+
+
+def export_list(rig):
+    return list(EXPORT_BONES) + [b for b in TIP_BONES if b in rig.pose.bones]
 
 
 def mat(m):
@@ -66,8 +76,8 @@ def args():
 
 
 MESH_GROUPS = {
-    "left_arm": ("left_arm", "left_arm_bend"), "right_arm": ("right_arm", "right_arm_bend"),
-    "left_leg": ("left_leg", "left_leg_bend"), "right_leg": ("right_leg", "right_leg_bend"),
+    "left_arm": ("left_arm", "left_arm_bend", "left_hand"), "right_arm": ("right_arm", "right_arm_bend", "right_hand"),
+    "left_leg": ("left_leg", "left_leg_bend", "left_foot"), "right_leg": ("right_leg", "right_leg_bend", "right_foot"),
     "torso": ("torso", "torso_bend"),
 }
 
@@ -79,8 +89,8 @@ def sample_mesh(scene, frames):
     part_of = {}
     for v in ob.data.vertices:
         gs = {names[g.group]: g.weight for g in v.groups}
-        for part, (a, b) in MESH_GROUPS.items():
-            if gs.get(a, 0) + gs.get(b, 0) > 0.5 and gs.get("head", 0) < 0.5:
+        for part, groups in MESH_GROUPS.items():
+            if sum(gs.get(g, 0) for g in groups) > 0.5 and gs.get("head", 0) < 0.5:
                 part_of[v.index] = part
     rest = {i: tuple(round(c, 6) for c in ob.data.vertices[i].co) for i in part_of}
     out = []
@@ -131,7 +141,7 @@ def sample(rig, scene, start, end):
             bpy.context.view_layer.update()
             frames.append({
                 "frame": f + sub,
-                "bones": {b: mat(rig.pose.bones[b].matrix) for b in BONES if b in rig.pose.bones},
+                "bones": {b: mat(rig.pose.bones[b].matrix) for b in bones_of(rig)},
             })
         f += 1
     return frames
@@ -186,14 +196,18 @@ def main():
         if action.use_frame_range:
             start, end = int(action.frame_start), int(action.frame_end)
 
-        # 1) rig completo
+        # 1) rig completo, desde la pose de reposo (los canales sin claves no heredan la acción anterior)
+        exporter.reset_pose(rig)
         scene.frame_set(0)
         vanilla = bool(rig.pose.bones["settings"]["vanilla"])
         rig_frames = sample(rig, scene, start, end)
 
         # 2) lo que representa el json exportado
         scene.frame_set(0)
-        _, work_action = collect_animation_data(rig, list(EXPORT_BONES))
+        exporter.reset_pose(rig)
+        # como el exportador: los huesos movidos solo por IK/restricciones también se hornean
+        with exporter.keyed_source(rig, action, exporter.baked_bones(rig, export_list(rig))):
+            _, work_action = collect_animation_data(rig, export_list(rig))
         original_slot = rig.animation_data.action_slot
         rig.animation_data.action = work_action
         for slot in work_action.slots:

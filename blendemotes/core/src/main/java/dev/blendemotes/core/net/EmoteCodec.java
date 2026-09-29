@@ -32,8 +32,8 @@ import java.util.zip.Inflater;
  * unbounded memory.
  */
 public final class EmoteCodec {
-    /** 2: bends in every direction (twist and sideways tracks) and models. 1 is still read. */
-    public static final int FORMAT = 2;
+    /** 3: hands and feet (tip tracks); 2: bends in every direction and models. 1 and 2 are still read. */
+    public static final int FORMAT = 3;
     /** Upper bound of the decompressed size (models with their textures included). */
     public static final int MAX_RAW_BYTES = 12 * 1024 * 1024;
     public static final int MAX_MODELS = 32;
@@ -66,7 +66,7 @@ public final class EmoteCodec {
         byte[] raw = inflate(data, MAX_RAW_BYTES);
         DataInputStream in = new DataInputStream(new ByteArrayInputStream(raw));
         int format = in.readUnsignedByte();
-        if (format != 1 && format != FORMAT) {
+        if (format < 1 || format > FORMAT) {
             throw new IOException("unsupported emote data format " + format);
         }
         UUID id = new UUID(in.readLong(), in.readLong());
@@ -151,6 +151,9 @@ public final class EmoteCodec {
             writeTrack(out, b.bend);
             writeTrack(out, b.bendAxes[BoneAnimation.Y]);
             writeTrack(out, b.bendAxes[BoneAnimation.Z]);
+            for (int i = 0; i < 3; i++) {
+                writeTrack(out, b.tipAxes[i]);
+            }
         }
         out.writeShort(Math.min(a.models.size(), MAX_MODELS));
         for (int i = 0; i < a.models.size() && i < MAX_MODELS; i++) {
@@ -251,7 +254,8 @@ public final class EmoteCodec {
             Track bend = readTrack(in, budget);
             Track bendTwist = format >= 2 ? readTrack(in, budget) : null;
             Track bendSide = format >= 2 ? readTrack(in, budget) : null;
-            bones.put(name, new BoneAnimation(pos, rot, scale, bend, bendTwist, bendSide));
+            Track[] tip = format >= 3 ? new Track[]{readTrack(in, budget), readTrack(in, budget), readTrack(in, budget)} : null;
+            bones.put(name, BoneAnimation.of(pos, rot, scale, new Track[]{bend, bendTwist, bendSide}, tip));
         }
         List<EmoteModel> models = new ArrayList<EmoteModel>();
         if (format >= 2) {

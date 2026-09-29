@@ -47,6 +47,8 @@ public final class PoseWriter {
             e.scaleZ = (float) t.scaleZ;
             e.bend = p.bend != null && EmoteSettings.bends() ? pose.bendVector(p) : Vec3.ZERO;
             e.setJoint(pose.joint(p));
+            e.tip = p.bend != null && EmoteSettings.bends() ? pose.tipVector(p) : Vec3.ZERO;
+            e.setTipJoint(pose.tipJoint(p));
         }
     }
 

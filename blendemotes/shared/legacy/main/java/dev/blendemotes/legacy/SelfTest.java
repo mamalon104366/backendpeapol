@@ -22,7 +22,7 @@ import net.minecraft.world.GameType;
 final class SelfTest {
     private static final boolean ENABLED = Boolean.getBoolean("blendemotes.selftest")
             || "1".equals(System.getenv("BLENDEMOTES_SELFTEST"));
-    private static final String[] EMOTES = {"Inchworm", "Cartwheel", "Cantar"};
+    private static final String[] EMOTES = {"Inchworm", "Cartwheel", "Manos y pies"};
     private static final int[] SHOTS = {6, 12, 18, 24};
     private static int state;
     private static int timer;
@@ -88,6 +88,9 @@ final class SelfTest {
             case 2:
                 if (timer == 10) {
                     Emote e = LegacyEmotes.client().library.findByName(EMOTES[emoteIndex]);
+                    if (e == null) {
+                        e = dev.blendemotes.core.emote.BuiltinEmotes.selfTest(EMOTES[emoteIndex]);
+                    }
                     LegacyEmotes.LOGGER.info("[selftest] playing " + EMOTES[emoteIndex] + " -> " + e);
                     if (e != null) {
                         LegacyEmotes.client().playLocal(e);
@@ -95,7 +98,7 @@ final class SelfTest {
                 }
                 for (int i = 0; i < SHOTS.length; i++) {
                     if (timer == 10 + SHOTS[i]) {
-                        shot(mc, EMOTES[emoteIndex].toLowerCase() + "_" + i);
+                        shot(mc, EMOTES[emoteIndex].toLowerCase().replace(' ', '_') + "_" + i);
                     }
                 }
                 if (timer > 10 + SHOTS[SHOTS.length - 1] + 2) {
@@ -133,7 +136,8 @@ final class SelfTest {
         if (pose != null) {
             LegacyEmotes.LOGGER.info("[selftest] " + name + " right_arm " + pose.transform(PlayerPart.RIGHT_ARM)
                     + " bend " + Math.toDegrees(pose.bend(PlayerPart.RIGHT_ARM))
-                    + " left_arm bend " + pose.bendVector(PlayerPart.LEFT_ARM) + " models " + pose.models().size());
+                    + " left_arm bend " + pose.bendVector(PlayerPart.LEFT_ARM) + " right_hand " + pose.tipVector(PlayerPart.RIGHT_ARM)
+                    + " models " + pose.models().size());
         } else {
             LegacyEmotes.LOGGER.info("[selftest] " + name + " (no emote)");
         }

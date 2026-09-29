@@ -24,6 +24,12 @@ public final class BoneAnimation {
     public final Track[] bendAxes;
     /** Forwards/backwards bend: {@code bendAxes[X]}. */
     public final Track bend;
+    /**
+     * Hand (arms) or foot (legs) in degrees: the rotation of the rig's hand/foot bone about its own
+     * axes (the same axes as the bend bone), turning the last 3 px of the limb about the wrist or
+     * the ankle. Applied X, then Y, then Z. Empty for other bones.
+     */
+    public final Track[] tipAxes;
 
     public BoneAnimation(Track[] position, Track[] rotation, Track[] scale, Track bend) {
         this(position, rotation, scale, bend, null, null);
@@ -31,17 +37,26 @@ public final class BoneAnimation {
 
     /** @param bendTwist bend about the lower half's own length; @param bendSide sideways bend */
     public BoneAnimation(Track[] position, Track[] rotation, Track[] scale, Track bend, Track bendTwist, Track bendSide) {
+        this(position, rotation, scale, new Track[]{bend, bendTwist, bendSide}, null);
+    }
+
+    private BoneAnimation(Track[] position, Track[] rotation, Track[] scale, Track[] bendAxes, Track[] tipAxes) {
         this.position = check(position);
         this.rotation = check(rotation);
         this.scale = check(scale);
-        this.bendAxes = check(new Track[]{bend, bendTwist, bendSide});
+        this.bendAxes = check(bendAxes);
         this.bend = this.bendAxes[X];
+        this.tipAxes = check(tipAxes);
+    }
+
+    /** Every channel, hand/foot included (null arrays or entries: not animated). */
+    public static BoneAnimation of(Track[] position, Track[] rotation, Track[] scale, Track[] bendAxes, Track[] tipAxes) {
+        return new BoneAnimation(position, rotation, scale, bendAxes, tipAxes);
     }
 
     /** Same channels with every bend axis (index X, Y, Z). */
     public static BoneAnimation withBendAxes(Track[] position, Track[] rotation, Track[] scale, Track[] bendAxes) {
-        Track[] b = bendAxes == null ? new Track[3] : bendAxes;
-        return new BoneAnimation(position, rotation, scale, b.length > 0 ? b[0] : null, b.length > 1 ? b[1] : null, b.length > 2 ? b[2] : null);
+        return new BoneAnimation(position, rotation, scale, bendAxes, null);
     }
 
     private static Track[] check(Track[] tracks) {
@@ -61,9 +76,15 @@ public final class BoneAnimation {
         return !bendAxes[X].isEmpty() || hasBendOffAxis();
     }
 
+    /** True when the hand (arms) or the foot (legs) is animated. */
+    public boolean hasTip() {
+        return !tipAxes[X].isEmpty() || !tipAxes[Y].isEmpty() || !tipAxes[Z].isEmpty();
+    }
+
     public boolean isEmpty() {
         for (int i = 0; i < 3; i++) {
-            if (!position[i].isEmpty() || !rotation[i].isEmpty() || !scale[i].isEmpty() || !bendAxes[i].isEmpty()) {
+            if (!position[i].isEmpty() || !rotation[i].isEmpty() || !scale[i].isEmpty() || !bendAxes[i].isEmpty()
+                    || !tipAxes[i].isEmpty()) {
                 return false;
             }
         }
@@ -77,6 +98,7 @@ public final class BoneAnimation {
             t = Math.max(t, rotation[i].lastTime());
             t = Math.max(t, scale[i].lastTime());
             t = Math.max(t, bendAxes[i].lastTime());
+            t = Math.max(t, tipAxes[i].lastTime());
         }
         return t;
     }

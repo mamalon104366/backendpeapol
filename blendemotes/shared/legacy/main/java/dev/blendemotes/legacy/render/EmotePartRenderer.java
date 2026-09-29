@@ -20,6 +20,9 @@ public class EmotePartRenderer extends ModelRenderer {
     private Vec3 joint = Vec3.ZERO;
     /** Bend as a rotation vector (radians, part-local): X forwards/backwards, Z sideways; zero = straight. */
     public Vec3 bend = Vec3.ZERO;
+    /** Turn of the hand/foot about the wrist/ankle (rotation vector, radians, part-local). */
+    public Vec3 tip = Vec3.ZERO;
+    private Vec3 tipJoint = Vec3.ZERO;
     public float scaleX = 1;
     public float scaleY = 1;
     public float scaleZ = 1;
@@ -44,9 +47,14 @@ public class EmotePartRenderer extends ModelRenderer {
         this.joint = joint;
     }
 
+    public void setTipJoint(Vec3 tipJoint) {
+        this.tipJoint = tipJoint;
+    }
+
     public void resetEmote() {
         emote = false;
         bend = Vec3.ZERO;
+        tip = Vec3.ZERO;
         scaleX = 1;
         scaleY = 1;
         scaleZ = 1;
@@ -56,13 +64,15 @@ public class EmotePartRenderer extends ModelRenderer {
         emote = from.emote;
         bend = from.bend;
         joint = from.joint;
+        tip = from.tip;
+        tipJoint = from.tipJoint;
         scaleX = from.scaleX;
         scaleY = from.scaleY;
         scaleZ = from.scaleZ;
     }
 
     private boolean custom() {
-        return emote && (bend.x != 0 || bend.y != 0 || bend.z != 0 || scaleX != 1 || scaleY != 1 || scaleZ != 1);
+        return emote && (bend.x != 0 || bend.y != 0 || bend.z != 0 || tip.x != 0 || tip.y != 0 || tip.z != 0 || scaleX != 1 || scaleY != 1 || scaleZ != 1);
     }
 
     @Override
@@ -98,7 +108,7 @@ public class EmotePartRenderer extends ModelRenderer {
 
     /** Draws the (bent) cube in the current part space. */
     public void draw(float scale) {
-        BendMesh.Output out = mesh.deform(bend, joint, buffer);
+        BendMesh.Output out = mesh.deform(bend, joint, tip, tipJoint, buffer);
         Compat.begin(7, DefaultVertexFormats.OLDMODEL_POSITION_TEX_NORMAL);
         for (int q = 0; q < out.quadCount; q++) {
             float nx = out.normals[q * 3];

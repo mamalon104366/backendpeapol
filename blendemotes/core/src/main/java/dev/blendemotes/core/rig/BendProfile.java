@@ -10,6 +10,14 @@ package dev.blendemotes.core.rig;
  */
 public final class BendProfile {
     /**
+     * Hand: the palm bone of the rig (right_hand / left_hand) turns the last 3 px of the arm about
+     * the wrist, 7 px below the shoulder pivot. Its weight grows linearly over 1.2 px around the
+     * wrist, after the elbow's transition has ended, as painted by tools/blender/upgrade_rig.py.
+     */
+    public static final BendProfile HAND = new BendProfile(7, 0, new double[]{6.4, 7.6}, new double[]{0.0, 1.0});
+    /** Foot: the foot bone (right_foot / left_foot) turns the last 3 px of the leg about the ankle. */
+    public static final BendProfile FOOT = new BendProfile(9, 0, new double[]{8.4, 9.6}, new double[]{0.0, 1.0});
+    /**
      * Right elbow: 4 px below the shoulder pivot, the forearm (lower half) moves.
      * Weights measured on the Blender rig's mesh (distance below the shoulder -> forearm weight).
      */
@@ -17,7 +25,7 @@ public final class BendProfile {
             new double[]{1.954, 2.848, 2.947, 3.121, 3.195, 3.394, 3.443, 3.667, 3.691, 3.940,
                     4.188, 4.213, 4.436, 4.486, 4.684, 4.758, 4.932, 5.031, 5.924},
             new double[]{0.0, 0.187, 0.187, 0.265, 0.265, 0.343, 0.343, 0.422, 0.422, 0.500,
-                    0.578, 0.578, 0.657, 0.657, 0.735, 0.735, 0.813, 0.813, 1.0});
+                    0.578, 0.578, 0.657, 0.657, 0.735, 0.735, 0.813, 0.813, 1.0}, HAND);
     /**
      * The rig's left elbow is painted a little differently: its last ring above the forearm has
      * only the bend bone's weight (no {@code left_arm}), so Blender normalizes it to 1.
@@ -26,7 +34,7 @@ public final class BendProfile {
             new double[]{1.954, 2.848, 2.947, 3.121, 3.195, 3.394, 3.443, 3.667, 3.691, 3.940,
                     4.188, 4.213, 4.436, 4.486, 4.684, 4.758, 4.932},
             new double[]{0.0, 0.187, 0.187, 0.265, 0.265, 0.343, 0.343, 0.422, 0.422, 0.500,
-                    0.578, 0.578, 0.657, 0.657, 0.735, 0.735, 1.0});
+                    0.578, 0.578, 0.657, 0.657, 0.735, 0.735, 1.0}, HAND);
     /**
      * Knee: 6 px below the hip pivot, the shin (lower half) moves.
      * Weights measured on the Blender rig's mesh.
@@ -35,7 +43,7 @@ public final class BendProfile {
             new double[]{3.868, 4.761, 4.860, 5.034, 5.109, 5.307, 5.357, 5.580, 5.605, 5.853,
                     6.101, 6.126, 6.349, 6.399, 6.597, 6.672, 6.846, 6.945, 7.838},
             new double[]{0.0, 0.187, 0.187, 0.265, 0.265, 0.343, 0.343, 0.422, 0.422, 0.500,
-                    0.578, 0.578, 0.657, 0.657, 0.735, 0.735, 0.813, 0.813, 1.0});
+                    0.578, 0.578, 0.657, 0.657, 0.735, 0.735, 0.813, 0.813, 1.0}, FOOT);
     /** Cape: bends at its middle, lower half moves. */
     public static final BendProfile CAPE = limb(8, 0);
     /**
@@ -55,8 +63,14 @@ public final class BendProfile {
     /** Piecewise linear weight curve: distance below the pivot -> weight of the bent transform. */
     private final double[] ds;
     private final double[] ws;
+    /** The hand or foot at the end of the lower half (a second joint), or null. */
+    public final BendProfile tip;
 
     public BendProfile(double jointY, double jointZ, double[] ds, double[] ws) {
+        this(jointY, jointZ, ds, ws, null);
+    }
+
+    public BendProfile(double jointY, double jointZ, double[] ds, double[] ws, BendProfile tip) {
         if (ds.length != ws.length || ds.length == 0) {
             throw new IllegalArgumentException("bad bend profile");
         }
@@ -64,6 +78,7 @@ public final class BendProfile {
         this.jointZ = jointZ;
         this.ds = ds.clone();
         this.ws = ws.clone();
+        this.tip = tip;
     }
 
     /**

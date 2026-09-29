@@ -29,6 +29,10 @@ public abstract class ModelPartMixin implements BendablePart {
     @Unique
     private Vec3 blendemotes$joint = Vec3.ZERO;
     @Unique
+    private Vec3 blendemotes$tip = Vec3.ZERO;
+    @Unique
+    private Vec3 blendemotes$tipJoint = Vec3.ZERO;
+    @Unique
     private float blendemotes$sx = 1;
     @Unique
     private float blendemotes$sy = 1;
@@ -54,6 +58,22 @@ public abstract class ModelPartMixin implements BendablePart {
         blendemotes$sx = sx;
         blendemotes$sy = sy;
         blendemotes$sz = sz;
+    }
+
+    @Override
+    public void blendemotes$setTip(Vec3 tip, Vec3 tipJoint) {
+        blendemotes$tip = tip;
+        blendemotes$tipJoint = tipJoint;
+    }
+
+    @Override
+    public Vec3 blendemotes$tip() {
+        return blendemotes$tip;
+    }
+
+    @Override
+    public Vec3 blendemotes$tipJoint() {
+        return blendemotes$tipJoint;
     }
 
     @Override
@@ -86,6 +106,7 @@ public abstract class ModelPartMixin implements BendablePart {
         blendemotes$active = false;
         blendemotes$dirty = false;
         blendemotes$bend = Vec3.ZERO;
+        blendemotes$tip = Vec3.ZERO;
         blendemotes$sx = 1;
         blendemotes$sy = 1;
         blendemotes$sz = 1;
@@ -93,7 +114,8 @@ public abstract class ModelPartMixin implements BendablePart {
 
     @Unique
     private boolean blendemotes$bent() {
-        return blendemotes$bend.x != 0 || blendemotes$bend.y != 0 || blendemotes$bend.z != 0;
+        return blendemotes$bend.x != 0 || blendemotes$bend.y != 0 || blendemotes$bend.z != 0
+                || blendemotes$tip.x != 0 || blendemotes$tip.y != 0 || blendemotes$tip.z != 0;
     }
 
     @Inject(method = "translateAndRotate", at = @At("TAIL"))
@@ -108,7 +130,7 @@ public abstract class ModelPartMixin implements BendablePart {
     private void blendemotes$compile(PoseStack.Pose pose, VertexConsumer consumer, int light, int overlay, int color,
                                      CallbackInfo ci) {
         if (blendemotes$active && blendemotes$bent() && blendemotes$mesh != null) {
-            MeshEmitter.emit(blendemotes$mesh.deform(blendemotes$bend, blendemotes$joint, blendemotes$buffer),
+            MeshEmitter.emit(blendemotes$mesh.deform(blendemotes$bend, blendemotes$joint, blendemotes$tip, blendemotes$tipJoint, blendemotes$buffer),
                     pose, consumer, light, overlay, color);
             ci.cancel();
         }
@@ -118,7 +140,7 @@ public abstract class ModelPartMixin implements BendablePart {
     private void blendemotes$compile(PoseStack.Pose pose, VertexConsumer consumer, int light, int overlay,
                                      float r, float g, float b, float a, CallbackInfo ci) {
         if (blendemotes$active && blendemotes$bent() && blendemotes$mesh != null) {
-            MeshEmitter.emit(blendemotes$mesh.deform(blendemotes$bend, blendemotes$joint, blendemotes$buffer),
+            MeshEmitter.emit(blendemotes$mesh.deform(blendemotes$bend, blendemotes$joint, blendemotes$tip, blendemotes$tipJoint, blendemotes$buffer),
                     pose, consumer, light, overlay, MeshEmitter.argb(r, g, b, a));
             ci.cancel();
         }
@@ -135,6 +157,8 @@ public abstract class ModelPartMixin implements BendablePart {
         blendemotes$dirty |= blendemotes$active;
         blendemotes$bend = src.blendemotes$bend();
         blendemotes$joint = src.blendemotes$joint();
+        blendemotes$tip = src.blendemotes$tip();
+        blendemotes$tipJoint = src.blendemotes$tipJoint();
         blendemotes$sx = s[0];
         blendemotes$sy = s[1];
         blendemotes$sz = s[2];

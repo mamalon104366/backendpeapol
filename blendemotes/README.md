@@ -29,10 +29,15 @@ Blender (emote_creator.blend)  ──export──►  emote.json  ──►  .mi
   Los tests automáticos comparan el mod contra Blender:
   * huesos: error máximo **0.005 píxeles** en `cartwheel` e `inchworm`;
   * malla doblada (codos, rodillas, torso): error máximo **0.04 píxeles**;
-  * codos y rodillas doblados hacia los lados y el micrófono del ejemplo `cantar`: error
-    máximo **0.006 píxeles**.
+  * codos y rodillas doblados hacia los lados y un modelo en la mano: error máximo
+    **0.006 píxeles**;
+  * palmas y pies girando en los tres ejes (con una pierna en IK): huesos **0.0001 píxeles**,
+    malla **0.003 píxeles**.
 * **Codos y rodillas en todas las direcciones.** El antebrazo y la parte baja de la pierna se
   doblan hacia delante y hacia atrás **y hacia los lados** (el hueso `*_bend` gira en X y en Z).
+* **Palma y pie.** Huesos `right_hand` / `left_hand` (la palma: los 3 px del final del brazo giran
+  en la muñeca) y `right_foot` / `left_foot` (el pie: los 3 px del final de la pierna giran en el
+  tobillo), en los tres ejes. Lo que se lleva en la mano sigue a la palma.
 * **Modelos en los emotes.** Un emote puede llevar modelos 3D propios (un micrófono, una
   guitarra, un caballo...) enganchados a cualquier hueso del rig o a huesos nuevos que añadas;
   viajan dentro del `.json` (geometría y textura) y se ven en todas las versiones y en
@@ -62,10 +67,21 @@ Blender (emote_creator.blend)  ──export──►  emote.json  ──►  .mi
    blender -b emote_creator.blend -P tools/blender/upgrade_rig.py -- --out emote_creator_blendemotes.blend
    ```
 
-   Desbloquea el eje Z de `left/right_arm_bend` y `left/right_leg_bend` (doblez lateral), pone
-   el exportador nuevo en el botón **Export** del rig, añade el campo **Modelos** al panel de
-   la acción y trae el ejemplo `cantar` (micrófono en la mano, codo y rodilla hacia los lados).
-   `--no-demo` lo actualiza sin el ejemplo.
+   Qué cambia en el rig:
+   * apaga el **espejo X** del rig original (movías el brazo izquierdo y se movía el derecho);
+   * añade la **palma** y el **pie** con sus pesos en la malla; `right_item` / `left_item`
+     cuelgan de la palma;
+   * desbloquea el eje Z de `left/right_arm_bend` y `left/right_leg_bend` (doblez lateral);
+   * todos los huesos en **gris** y ordenados en colecciones (Cuerpo, Brazos, Piernas, Manos y
+     pies, IK, Objetos); el mecanismo interno queda oculto;
+   * con el IK de un brazo o pierna **encendido** solo se ven su mano/pie de IK y su polo, y con
+     el IK **apagado** solo sus huesos normales: nunca hay un hueso a la vista que no haga nada;
+   * panel **BlendEmotes** en la barra lateral del visor 3D (tecla **N**) con los interruptores
+     de IK de cada brazo y pierna (ponles un keyframe, como al resto);
+   * el botón **Export** usa el exportador nuevo y el panel de la acción tiene el campo
+     **Modelos**.
+
+   Las acciones que ya tuviera el archivo no cambian (la palma y el pie empiezan rectos).
 1. Abre `emote_creator_blendemotes.blend` (Blender 5.2+, igual que el rig).
 2. Crea una acción nueva para el armature `export_armature` y anímala (IK, *bends* y todo lo
    que ofrece el rig).
@@ -74,7 +90,7 @@ Blender (emote_creator.blend)  ──export──►  emote.json  ──►  .mi
    * **Recomendado – por lotes, sin fallos del exportador:**
 
      ```bash
-     blender -b emote_creator.blend -P tools/blender/batch_export.py -- --out ./emotes
+     blender -b emote_creator_blendemotes.blend -P tools/blender/batch_export.py -- --out ./emotes
      ```
 
      Opciones: `--actions a,b` (solo esas acciones), `--no-icon`, `--icon-engine CYCLES`
@@ -84,6 +100,13 @@ Blender (emote_creator.blend)  ──export──►  emote.json  ──►  .mi
    **Recargar** en el menú de emotes. También puedes usar subcarpetas.
 
 El icono que se ve en la rueda es el render que hace el exportador desde la cámara de la escena.
+
+### Palma y pie
+
+Rota `right_hand` / `left_hand` o `right_foot` / `left_foot` en X, Y y Z: gira el final del brazo
+(la mano) en la muñeca o el final de la pierna (el pie) en el tobillo, con el antebrazo o la
+pierna doblados o no. Se exporta como el canal `"tip": {"vector": [x, y, z]}` de su brazo o
+pierna. Los mods que no lo conocen lo ignoran.
 
 ### Doblar hacia los lados
 
@@ -104,6 +127,17 @@ así que los emotes viejos y los de Emotecraft funcionan igual.
 
 Límites: 20 000 triángulos por modelo, texturas de hasta 1 MB y 32 modelos por emote. Se
 dibujan sin ocultar caras traseras (sirven planos y mallas abiertas) y con transparencia.
+
+### Qué corrige el exportador nuevo
+
+* **Brazos y piernas movidos solo con IK.** El exportador del rig solo guardaba el movimiento de
+  los huesos que ya tenían claves: si animabas una pierna moviendo solo el cubo del pie, se
+  exportaba congelada. Ahora se exporta lo que se ve en Blender.
+* **Exportar dos veces daba resultados distintos** en los emotes "vanilla" (sin dobleces): el
+  horneado dejaba desplazados los huesos auxiliares del rig y cada exportación los movía un
+  poco más. Ahora siempre sale lo mismo.
+* Un canal que la acción no anima no se escribe (en el juego sigue la pose normal del jugador),
+  aunque en Blender quede algo de la acción que se vio antes.
 
 ## En el juego
 

@@ -56,7 +56,7 @@ public final class PoseEvaluator {
         out.setRig(rig);
         out.root.set(e.local(BODY));
         for (PlayerPart p : PlayerPart.VALUES) {
-            out.setPart(p, e.world(p.bone), e.bendVector(p.bone));
+            out.setPart(p, e.world(p.bone), e.bendVector(p.bone), e.tipVector(p.bone));
         }
         out.clearBones();
         if (anim != null) {
@@ -127,7 +127,8 @@ public final class PoseEvaluator {
         } else {
             result = new Mat4(world(parent));
             if (attachesToBendSegment(bone, parent)) {
-                result.mulLocal(bendSegment(parent));
+                // items hang from the hand: the forearm's bend, then the hand's own turn
+                result.mulLocal(bendSegment(parent)).mulLocal(tipSegment(parent));
             }
         }
         result.mulLocal(local(bone));
@@ -154,6 +155,10 @@ public final class PoseEvaluator {
         if (bone.equals(BODY)) {
             return new Mat4();
         }
+        PlayerPart limb = PlayerPart.byTipBone(bone);
+        if (limb != null) {
+            return new Mat4(world(limb.bone)).mulLocal(bendSegment(limb.bone)).mulLocal(tipSegment(limb.bone));
+        }
         PlayerPart lower = bendBase(bone);
         if (lower != null) {
             return new Mat4(world(lower.bone)).mulLocal(bendSegment(lower.bone));
@@ -162,6 +167,10 @@ public final class PoseEvaluator {
     }
 
     Vec3 modelBonePivot(String bone) {
+        PlayerPart limb = PlayerPart.byTipBone(bone);
+        if (limb != null) {
+            return rig.pivot(limb).add(rig.tipJoint(limb));
+        }
         PlayerPart lower = bendBase(bone);
         if (lower != null) {
             return rig.pivot(lower).add(rig.joint(lower));
@@ -221,8 +230,66 @@ public final class PoseEvaluator {
     }
 
     private double axis(BoneAnimation ba, int axis) {
-        Track t = ba.bendAxes[axis];
+        return value(ba.bendAxes[axis]);
+    }
+
+    private double value(Track t) {
         return t.isEmpty() ? 0 : Math.toRadians(t.evaluate(time, ctx));
+    }
+
+    /**
+     * The hand/foot turn as a rotation about the wrist/ankle (part-local, rest pose), or null. The
+     * rig's hand and foot bones have the same axes as the bend bones, so the same tilt applies.
+     */
+    Mat4 tipRotation(String bone) {
+        PlayerPart part = PlayerPart.byBone(bone);
+        if (anim == null || part == null || part.bend == null || part.bend.tip == null) {
+            return null;
+        }
+        BoneAnimation ba = anim.bone(bone);
+        if (ba == null || !ba.hasTip()) {
+            return null;
+        }
+        double x = value(ba.tipAxes[BoneAnimation.X]);
+        double y = value(ba.tipAxes[BoneAnimation.Y]);
+        double z = value(ba.tipAxes[BoneAnimation.Z]);
+        if (y == 0 && z == 0) {
+            return x == 0 ? null : Mat4.rotationX(x);
+        }
+        Mat4 r = Mat4.rotationZYX(x, y, z);
+        double tilt = anim.blenderRig ? rig.blenderBendTilt(part) : 0;
+        if (tilt != 0) {
+            r = Mat4.rotationX(tilt).mul(r).mul(Mat4.rotationX(-tilt));
+        }
+        return r;
+    }
+
+    /** Rotation of the hand/foot about the wrist/ankle, in the part's rest model space. */
+    Mat4 tipSegment(String bone) {
+        Mat4 r = tipRotation(bone);
+        if (r == null) {
+            return new Mat4();
+        }
+        PlayerPart part = PlayerPart.byBone(bone);
+        Vec3 j = rig.pivot(part).add(rig.tipJoint(part));
+        return Mat4.translation(j.x, j.y, j.z).mulLocal(r).mulLocal(Mat4.translation(-j.x, -j.y, -j.z));
+    }
+
+    /** The hand/foot turn as a rotation vector (radians, part-local); X alone keeps its exact angle. */
+    Vec3 tipVector(String bone) {
+        PlayerPart part = PlayerPart.byBone(bone);
+        if (anim == null || part == null || part.bend == null || part.bend.tip == null) {
+            return Vec3.ZERO;
+        }
+        BoneAnimation ba = anim.bone(bone);
+        if (ba == null || !ba.hasTip()) {
+            return Vec3.ZERO;
+        }
+        if (ba.tipAxes[BoneAnimation.Y].isEmpty() && ba.tipAxes[BoneAnimation.Z].isEmpty()) {
+            return new Vec3(value(ba.tipAxes[BoneAnimation.X]), 0, 0);
+        }
+        Mat4 r = tipRotation(bone);
+        return r == null ? Vec3.ZERO : rotationVector(r);
     }
 
     /**

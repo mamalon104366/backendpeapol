@@ -18,6 +18,10 @@ import java.util.TreeSet;
  * around the joint by {@link #blendAngle(double, double)}. The surface stays closed (no gaps or
  * holes at the elbow/knee), keeps its thickness, and the texture keeps its pixel mapping.
  * <p>
+ * Arms and legs also have a hand/foot ({@link BendProfile#tip}): the last 3 px turn about the
+ * wrist/ankle first, then the whole lower half turns about the elbow/knee, which is exactly how
+ * the rig composes its hand bone (a child of the bend bone) when the weights do not overlap.
+ * <p>
  * Build once per part geometry (it only depends on the model), then call {@link #deform} every
  * frame. All coordinates are part-local pixels (Y down from the part pivot), like
  * {@code ModelPart} cubes.
@@ -36,6 +40,8 @@ public final class BendMesh {
     private final float[] normals;
     /** quadCount * 4 weights. */
     private final float[] weights;
+    /** quadCount * 4 weights of the hand/foot, or null when the part has none. */
+    private final float[] tipWeights;
 
     private BendMesh(BendProfile profile, float[] positions, float[] uvs, float[] normals) {
         this.profile = profile;
@@ -46,6 +52,14 @@ public final class BendMesh {
         this.weights = new float[quadCount * 4];
         for (int v = 0; v < quadCount * 4; v++) {
             weights[v] = (float) profile.weight(positions[v * 3 + 1]);
+        }
+        if (profile.tip != null) {
+            tipWeights = new float[quadCount * 4];
+            for (int v = 0; v < quadCount * 4; v++) {
+                tipWeights[v] = (float) profile.tip.weight(positions[v * 3 + 1]);
+            }
+        } else {
+            tipWeights = null;
         }
     }
 
@@ -93,6 +107,19 @@ public final class BendMesh {
     /** Heights where the geometry is cut: profile breakpoints plus a fine grid inside ramps. */
     static double[] cutLevels(BendProfile profile) {
         TreeSet<Double> set = new TreeSet<Double>();
+        addCuts(profile, set);
+        if (profile.tip != null) {
+            addCuts(profile.tip, set);
+        }
+        double[] r = new double[set.size()];
+        int i = 0;
+        for (Double d : set) {
+            r[i++] = d;
+        }
+        return r;
+    }
+
+    private static void addCuts(BendProfile profile, TreeSet<Double> set) {
         double[] bp = profile.breakpoints();
         for (double b : bp) {
             set.add(b);
@@ -105,12 +132,6 @@ public final class BendMesh {
                 set.add(a + (b - a) * s / steps);
             }
         }
-        double[] r = new double[set.size()];
-        int i = 0;
-        for (Double d : set) {
-            r[i++] = d;
-        }
-        return r;
     }
 
     private static void split(float[] p, float[] uv, float[] nrm, double[] cuts,
@@ -222,19 +243,43 @@ public final class BendMesh {
      * @param joint joint position (part-local)
      */
     public Output deform(Vec3 bend, Vec3 joint, Output out) {
+        return deform(bend, joint, Vec3.ZERO, Vec3.ZERO, out);
+    }
+
+    /**
+     * Bends the lower half and turns the hand/foot.
+     *
+     * @param tip      rotation vector of the hand/foot about the wrist/ankle (radians, part-local,
+     *                 rest pose); zero when it does not move or the part has no hand/foot
+     * @param tipJoint wrist/ankle position (part-local, rest pose)
+     */
+    public Output deform(Vec3 bend, Vec3 joint, Vec3 tip, Vec3 tipJoint, Output out) {
         out.ensure(quadCount);
         Axis axis = new Axis(bend);
+        Axis tipAxis = tipWeights != null && tip != null ? new Axis(tip) : null;
+        if (tipAxis != null && tipAxis.angle == 0) {
+            tipAxis = null;
+        }
         float[] dst = out.positions;
         for (int v = 0; v < quadCount * 4; v++) {
+            double x = positions[v * 3];
+            double y = positions[v * 3 + 1];
+            double z = positions[v * 3 + 2];
+            if (tipAxis != null && tipWeights[v] > 0) {
+                tipAxis.rotate(x - tipJoint.x, y - tipJoint.y, z - tipJoint.z, blendAngle(tipAxis.angle, tipWeights[v]));
+                x = tipJoint.x + tipAxis.rx;
+                y = tipJoint.y + tipAxis.ry;
+                z = tipJoint.z + tipAxis.rz;
+            }
             double phi = blendAngle(axis.angle, weights[v]);
-            axis.rotate(positions[v * 3] - joint.x, positions[v * 3 + 1] - joint.y, positions[v * 3 + 2] - joint.z, phi);
+            axis.rotate(x - joint.x, y - joint.y, z - joint.z, phi);
             dst[v * 3] = (float) (joint.x + axis.rx);
             dst[v * 3 + 1] = (float) (joint.y + axis.ry);
             dst[v * 3 + 2] = (float) (joint.z + axis.rz);
         }
         System.arraycopy(uvs, 0, out.uvs, 0, quadCount * 8);
         for (int q = 0; q < quadCount; q++) {
-            computeNormal(q, axis, out);
+            computeNormal(q, axis, tipAxis, out);
         }
         return out;
     }
@@ -307,7 +352,7 @@ public final class BendMesh {
         return 2 * Math.atan2(w * sw, (1 - w) + w * cw);
     }
 
-    private void computeNormal(int q, Axis axis, Output out) {
+    private void computeNormal(int q, Axis axis, Axis tipAxis, Output out) {
         float[] p = out.positions;
         int b = q * 12;
         // diagonals of the deformed quad
@@ -322,7 +367,17 @@ public final class BendMesh {
         double nz = ax * by - ay * bx;
         // reference: rest normal rotated like the middle of the quad
         double w = (weights[q * 4] + weights[q * 4 + 1] + weights[q * 4 + 2] + weights[q * 4 + 3]) / 4.0;
-        axis.rotate(normals[q * 3], normals[q * 3 + 1], normals[q * 3 + 2], blendAngle(axis.angle, w));
+        double n0 = normals[q * 3];
+        double n1 = normals[q * 3 + 1];
+        double n2 = normals[q * 3 + 2];
+        if (tipAxis != null) {
+            double tw = (tipWeights[q * 4] + tipWeights[q * 4 + 1] + tipWeights[q * 4 + 2] + tipWeights[q * 4 + 3]) / 4.0;
+            tipAxis.rotate(n0, n1, n2, blendAngle(tipAxis.angle, tw));
+            n0 = tipAxis.rx;
+            n1 = tipAxis.ry;
+            n2 = tipAxis.rz;
+        }
+        axis.rotate(n0, n1, n2, blendAngle(axis.angle, w));
         double rx = axis.rx;
         double ry = axis.ry;
         double rz = axis.rz;
@@ -353,8 +408,23 @@ public final class BendMesh {
 
     /** {@link #deformPoint(Vec3, BendProfile, double, Vec3)} for a bend in any direction. */
     public static Vec3 deformPoint(Vec3 p, BendProfile profile, Vec3 bend, Vec3 joint) {
+        return deformPoint(p, profile, bend, joint, Vec3.ZERO, Vec3.ZERO);
+    }
+
+    /** Where a rest point ends up with the hand/foot turned too (see {@link #deform(Vec3, Vec3, Vec3, Vec3, Output)}). */
+    public static Vec3 deformPoint(Vec3 p, BendProfile profile, Vec3 bend, Vec3 joint, Vec3 tip, Vec3 tipJoint) {
+        double x = p.x;
+        double y = p.y;
+        double z = p.z;
+        if (profile.tip != null && tip != null && tip.length() > 0) {
+            Axis t = new Axis(tip);
+            t.rotate(x - tipJoint.x, y - tipJoint.y, z - tipJoint.z, blendAngle(t.angle, profile.tip.weight(p.y)));
+            x = tipJoint.x + t.rx;
+            y = tipJoint.y + t.ry;
+            z = tipJoint.z + t.rz;
+        }
         Axis axis = new Axis(bend);
-        axis.rotate(p.x - joint.x, p.y - joint.y, p.z - joint.z, blendAngle(axis.angle, profile.weight(p.y)));
+        axis.rotate(x - joint.x, y - joint.y, z - joint.z, blendAngle(axis.angle, profile.weight(p.y)));
         return new Vec3(joint.x + axis.rx, joint.y + axis.ry, joint.z + axis.rz);
     }
 

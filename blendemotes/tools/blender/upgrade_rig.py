@@ -1,54 +1,103 @@
 """
-BlendEmotes - actualiza el rig `emote_creator.blend` (rig 2.0 de Emotecraft) para BlendEmotes.
+BlendEmotes - convierte el rig `emote_creator.blend` (rig 2.0 de Emotecraft) en el rig de BlendEmotes.
 
     blender -b emote_creator.blend -P upgrade_rig.py -- --out emote_creator_blendemotes.blend
 
-Qué cambia (el .blend original no se toca, se guarda uno nuevo):
+El .blend original no se toca: se guarda uno nuevo. Qué cambia:
 
-  * **Codos y rodillas hacia los lados.** Los huesos `left/right_arm_bend` y `left/right_leg_bend`
-    ya no tienen bloqueado el eje Z (ni en los candados de rotación ni en su restricción Limit
-    Rotation): el antebrazo y la parte baja de la pierna se doblan hacia delante, hacia atrás y
-    hacia los lados. El giro sobre sí mismos (Y) sigue bloqueado.
-  * **Exportador nuevo.** El botón *Export* del panel de la acción usa `blendemotes_export.py`
-    (el mismo que `batch_export.py`): exporta el doblez lateral y los modelos, y corrige los
-    fallos del exportador original.
-  * **Modelos.** El panel de la acción tiene un campo *Modelos*: la colección cuyos objetos
-    (emparentados a un hueso del rig) viajan con el emote: un micrófono, una guitarra, un
-    caballo...
-  * **Ejemplo.** La acción `cantar` (micrófono en la mano derecha, brazo izquierdo saludando
-    con el codo hacia un lado, rodilla hacia fuera) y la colección `Modelos - cantar`.
+  * **Sin espejo.** El rig original tenía activado *Pose > X-Axis Mirror*: al mover el brazo
+    izquierdo se movía también el derecho. Se apaga.
+  * **Palma y pie.** Huesos nuevos `right_hand` / `left_hand` (la palma: los 3 px del final del
+    brazo giran en la muñeca) y `right_foot` / `left_foot` (el pie: los 3 px del final de la
+    pierna giran en el tobillo), con sus pesos en la malla. Los objetos de la mano
+    (`right_item` / `left_item`) cuelgan de la palma.
+  * **Codos y rodillas hacia los lados.** Los huesos `*_bend` de brazos y piernas giran también
+    en Z.
+  * **Controles claros.** Todos los huesos en gris; colecciones ordenadas (Cuerpo, Brazos,
+    Piernas, Manos y pies, IK, Objetos) y el mecanismo interno oculto. Con el IK de una
+    extremidad encendido se ven su mano/pie de IK y su polo; apagado, sus huesos normales (así
+    nunca hay un hueso a la vista que no haga nada).
+  * **Panel "BlendEmotes"** en la barra lateral del visor 3D (tecla N): interruptores de IK de
+    cada brazo y pierna.
+  * **Exportador.** El botón *Export* usa `blendemotes_export.py` (doblez lateral, palma, pie,
+    modelos y las correcciones del exportador original) y el panel de la acción tiene el campo
+    *Modelos*.
+
+Las acciones que ya tenga el archivo no cambian: la palma y el pie empiezan rectos.
 """
 
-import math
 import os
 import sys
 
-import bmesh
 import bpy
-from mathutils import Matrix, Vector
+from mathutils import Matrix
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+import blendemotes_export  # noqa: E402
+
 RIG_NAME = "export_armature"
+MESH_NAME = "player_mesh"
+RIG_VERSION = "2.0 + BlendEmotes 1.2"
 SIDEWAYS_BONES = ["left_arm_bend", "right_arm_bend", "left_leg_bend", "right_leg_bend"]
-RIG_VERSION = "2.0 + BlendEmotes 1.1"
+
+# Palma y pie: hueso nuevo, extremidad, pivote de la extremidad (px bajo el cuello) y la rampa de
+# pesos (px bajo el pivote) en la que la punta pasa de no moverse a moverse entera. Deben coincidir
+# con BendProfile.HAND / FOOT y RigDefinition del mod.
+TIPS = {
+    "right_hand": ("right_arm", 2.0, (6.4, 7.6)),
+    "left_hand": ("left_arm", 2.0, (6.4, 7.6)),
+    "right_foot": ("right_leg", 12.0, (8.4, 9.6)),
+    "left_foot": ("left_leg", 12.0, (8.4, 9.6)),
+}
+ITEMS = {"right_item": "right_hand", "left_item": "left_hand"}
+IK_SWITCHES = {
+    "right_arm": "rightArm IK", "left_arm": "leftArm IK",
+    "right_leg": "rightLeg IK", "left_leg": "leftLeg IK",
+}
+IK_CONTROLS = {
+    "right_arm": ["right_arm_ik_goal", "rightArm_ik_pole"],
+    "left_arm": ["left_arm_ik_goal", "leftArm_ik_pole"],
+    "right_leg": ["right_leg_ik_goal", "rightLeg_ik_pole"],
+    "left_leg": ["left_leg_ik_goal", "leftLeg_ik_pole"],
+}
+COLLECTIONS = [
+    ("Cuerpo", ["body", "body_control", "waist", "torso", "torso_bend", "head", "cape", "cape_bend", "settings"], True),
+    ("Brazos", ["right_arm", "right_arm_bend", "left_arm", "left_arm_bend"], True),
+    ("Piernas", ["right_leg", "right_leg_bend", "left_leg", "left_leg_bend"], True),
+    ("Manos y pies", list(TIPS), True),
+    ("IK", ["right_arm_ik_goal", "rightArm_ik_pole", "left_arm_ik_goal", "leftArm_ik_pole",
+            "right_leg_ik_goal", "rightLeg_ik_pole", "left_leg_ik_goal", "leftLeg_ik_pole", "head_goal"], True),
+    ("Objetos", ["right_item", "left_item"], True),
+]
+MECHANISM = "Mecanismo"
 
 
 def args():
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     out = None
-    demo = True
     for i, a in enumerate(argv):
         if a == "--out":
             out = argv[i + 1]
-        if a == "--no-demo":
-            demo = False
     if out is None:
         base = os.path.splitext(bpy.data.filepath)[0]
         out = base + "_blendemotes.blend"
-    return out, demo
+    return out
 
 
-# ---------------------------------------------------------------------------- rig
+def set_mode(rig, mode):
+    bpy.context.view_layer.objects.active = rig
+    rig.select_set(True)
+    if rig.mode != mode:
+        bpy.ops.object.mode_set(mode=mode)
+
+
+# ---------------------------------------------------------------------------- bones
+
+def no_mirror(rig):
+    rig.pose.use_mirror_x = False
+    rig.data.use_mirror_x = False
+
 
 def unlock_sideways(rig):
     for name in SIDEWAYS_BONES:
@@ -60,6 +109,130 @@ def unlock_sideways(rig):
             if c.type == 'LIMIT_ROTATION':
                 c.use_limit_z = False
 
+
+def add_tip_bones(rig):
+    """Palma y pie: mitad final del hueso de doblez, con sus mismos ejes (mismo roll)."""
+    set_mode(rig, 'EDIT')
+    edit = rig.data.edit_bones
+    for tip, (part, _, _) in TIPS.items():
+        bend = edit[part + "_bend"]
+        bone = edit.get(tip) or edit.new(tip)
+        bone.head = bend.head.lerp(bend.tail, 0.5)
+        bone.tail = bend.tail.copy()
+        bone.roll = bend.roll
+        bone.parent = bend
+        bone.use_connect = False
+        bone.use_deform = True
+        bone.use_inherit_rotation = True
+        bone.inherit_scale = 'FULL'
+    for item, tip in ITEMS.items():
+        edit[item].parent = edit[tip]
+        edit[item].use_connect = False
+    set_mode(rig, 'POSE')
+    for tip in TIPS:
+        pb = rig.pose.bones[tip]
+        pb.rotation_mode = 'XYZ'
+        pb.lock_location = (True, True, True)
+        pb.lock_scale = (True, True, True)
+        pb.location = (0, 0, 0)
+        pb.rotation_euler = (0, 0, 0)
+        pb.scale = (1, 1, 1)
+    set_mode(rig, 'OBJECT')
+
+
+def paint_tip_weights(mesh_ob):
+    """Reparte el peso del hueso de doblez entre él y la palma/pie según la rampa de cada uno."""
+    if mesh_ob.matrix_world != Matrix.Identity(4):
+        raise RuntimeError("player_mesh tiene transformación de objeto; se esperaba la identidad")
+    groups = mesh_ob.vertex_groups
+    for tip, (part, pivot_y, (d0, d1)) in TIPS.items():
+        bend = groups[part + "_bend"]
+        target = groups.get(tip) or groups.new(name=tip)
+        for v in mesh_ob.data.vertices:
+            bw = 0.0
+            for g in v.groups:
+                if g.group == bend.index:
+                    bw = g.weight
+            if bw <= 0.0:
+                continue
+            d = (24.0 - 4.0 * v.co.z) - pivot_y  # px bajo el pivote de la extremidad
+            w = min(1.0, max(0.0, (d - d0) / (d1 - d0)))
+            if w <= 0.0:
+                continue
+            target.add([v.index], bw * w, 'REPLACE')
+            if w >= 1.0:
+                bend.remove([v.index])
+            else:
+                bend.add([v.index], bw * (1.0 - w), 'REPLACE')
+
+
+def _driver(owner, path, expression, variables):
+    fc = owner.driver_add(path)
+    drv = fc.driver
+    drv.type = 'SCRIPTED'
+    for v in list(drv.variables):
+        drv.variables.remove(v)
+    for name, target_id, data_path in variables:
+        var = drv.variables.new()
+        var.name = name
+        var.type = 'SINGLE_PROP'
+        var.targets[0].id_type = 'OBJECT'
+        var.targets[0].id = target_id
+        var.targets[0].data_path = data_path
+    drv.expression = expression
+    return fc
+
+
+def add_drivers(rig):
+    arm = rig.data
+    # en modo "vanilla" (sin dobleces) la palma y el pie tampoco deforman
+    for tip in TIPS:
+        _driver(arm.bones[tip], "use_deform", "not vanilla",
+                [("vanilla", rig, 'pose.bones["settings"]["vanilla"]')])
+    # con el IK de una extremidad encendido se ven sus controles de IK; apagado, sus huesos normales
+    for part, switch in IK_SWITCHES.items():
+        path = f'pose.bones["settings"]["{switch}"]'
+        for bone in (part, part + "_bend"):
+            _driver(arm.bones[bone], "hide", "ik >= 0.5", [("ik", rig, path)])
+        for bone in IK_CONTROLS[part]:
+            _driver(arm.bones[bone], "hide", "ik < 0.5", [("ik", rig, path)])
+
+
+def grey_bones(rig):
+    for bone in rig.data.bones:
+        bone.color.palette = 'DEFAULT'
+    for pb in rig.pose.bones:
+        pb.color.palette = 'DEFAULT'
+
+
+def organise_collections(rig):
+    arm = rig.data
+    wanted = {}
+    for name, bones, visible in COLLECTIONS:
+        coll = arm.collections.get(name) or arm.collections.new(name)
+        coll.is_visible = visible
+        for b in bones:
+            wanted[b] = coll
+    mechanism = arm.collections.get(MECHANISM) or arm.collections.new(MECHANISM)
+    mechanism.is_visible = False
+    keep = {c for c in wanted.values()} | {mechanism}
+    for bone in arm.bones:
+        for coll in list(bone.collections):
+            if coll not in keep:
+                coll.unassign(bone)
+        target = wanted.get(bone.name, mechanism)
+        for coll in keep:
+            if coll != target and bone.name in [b.name for b in coll.bones]:
+                coll.unassign(bone)
+        target.assign(bone)
+    for coll in list(arm.collections_all):
+        if coll not in keep:
+            arm.collections.remove(coll)
+    for bone in arm.bones:
+        bone.hide = False
+
+
+# ---------------------------------------------------------------------------- scripts
 
 PANEL_PROPERTY = '''
     models_collection: PointerProperty(
@@ -73,9 +246,9 @@ PANEL_PROPERTY = '''
 PANEL_UI = '''    layout.prop(data, "models_collection", icon='OUTLINER_COLLECTION')
 '''
 
-EXPORT_SCRIPT = '''# Botón "Export" del panel de la acción (rig 2.0 + BlendEmotes).
-# El trabajo lo hace blendemotes_export.py: doblez lateral de codos y rodillas, modelos y las
-# correcciones del exportador original del rig.
+EXPORT_SCRIPT = '''# Botón "Export" del panel de la acción (rig de BlendEmotes).
+# El trabajo lo hace blendemotes_export.py: doblez lateral de codos y rodillas, palma, pie, modelos
+# y las correcciones del exportador original del rig.
 import bpy
 
 exporter = bpy.data.texts["blendemotes_export.py"].as_module()
@@ -85,6 +258,52 @@ if rig is None or rig.type != 'ARMATURE':
 action = rig.animation_data.action
 path = exporter.export_action(rig, action, bpy.path.abspath(action.emote.emote_save_path), with_icon=True)
 print("Emote exportado:", path)
+'''
+
+RIG_UI = '''# Panel "BlendEmotes" de la barra lateral del visor 3D (tecla N): interruptores de IK.
+import bpy
+
+SWITCHES = [
+    ("rightArm IK", "Brazo derecho"),
+    ("leftArm IK", "Brazo izquierdo"),
+    ("rightLeg IK", "Pierna derecha"),
+    ("leftLeg IK", "Pierna izquierda"),
+]
+
+
+class BLENDEMOTES_PT_rig(bpy.types.Panel):
+    bl_label = "Rig BlendEmotes"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = "BlendEmotes"
+
+    @classmethod
+    def poll(cls, context):
+        rig = bpy.data.objects.get("export_armature")
+        return rig is not None and "settings" in rig.pose.bones
+
+    def draw(self, context):
+        settings = bpy.data.objects["export_armature"].pose.bones["settings"]
+        col = self.layout.column(align=True)
+        col.label(text="IK (0 = girar huesos, 1 = mover mano/pie):")
+        for prop, label in SWITCHES:
+            col.prop(settings, '["%s"]' % prop, text=label, slider=True)
+        box = self.layout.box()
+        box.label(text="Palma: right_hand / left_hand")
+        box.label(text="Pie: right_foot / left_foot")
+        box.label(text="Recuerda poner un keyframe al interruptor.")
+
+
+def register():
+    bpy.utils.register_class(BLENDEMOTES_PT_rig)
+
+
+def unregister():
+    bpy.utils.unregister_class(BLENDEMOTES_PT_rig)
+
+
+if __name__ == "__main__":
+    register()
 '''
 
 
@@ -107,11 +326,22 @@ def upgrade_scripts():
     export = bpy.data.texts.get("export.py") or bpy.data.texts.new("export.py")
     export.from_string(EXPORT_SCRIPT)
 
+    ui = bpy.data.texts.get("blendemotes_rig_ui.py") or bpy.data.texts.new("blendemotes_rig_ui.py")
+    ui.from_string(RIG_UI)
+    ui.use_module = True
+
     note = bpy.data.texts.get("Note")
-    if note is not None and "BlendEmotes" not in note.as_string():
-        note.from_string(note.as_string().rstrip() + "\n\n"
+    if note is not None:
+        text = note.as_string()
+        if "BlendEmotes:" in text:
+            text = text[:text.index("BlendEmotes:")].rstrip()
+        note.from_string(text.rstrip() + "\n\n"
                          "BlendEmotes:\n"
+                         "- Palma (right_hand / left_hand) y pie (right_foot / left_foot): giran el final del brazo y de la pierna.\n"
                          "- Codos y rodillas se doblan también hacia los lados (eje Z de los huesos *_bend).\n"
+                         "- Sin espejo X: cada lado se mueve por separado.\n"
+                         "- Panel 'BlendEmotes' (tecla N): IK de cada brazo y pierna. Con IK se ven la mano/pie de IK y el polo;\n"
+                         "  sin IK, los huesos del brazo/pierna.\n"
                          "- Campo 'Modelos' en el panel de la acción: colección de modelos que viajan con el emote.\n"
                          "- El botón Export usa blendemotes_export.py.\n"
                          f"Versión del rig: {RIG_VERSION}\n")
@@ -129,176 +359,49 @@ def upgrade_scripts():
     panel.use_module = True
 
 
-# ---------------------------------------------------------------------------- demo
-
-def microphone_image():
-    name = "microfono_textura"
-    image = bpy.data.images.get(name)
-    if image is not None:
-        return image
-    size = 16
-    image = bpy.data.images.new(name, size, size, alpha=True)
-    pixels = []
-    for y in range(size):
-        for x in range(size):
-            if y >= size // 2:
-                # grille: dark metal with lighter holes
-                light = (x + y) % 3 == 0
-                c = (0.55, 0.57, 0.6, 1.0) if light else (0.18, 0.19, 0.21, 1.0)
-            else:
-                # handle: black with a red stripe
-                c = (0.8, 0.08, 0.08, 1.0) if y in (3, 4) else (0.05, 0.05, 0.06, 1.0)
-            pixels.extend(c)
-    image.pixels = pixels
-    image.pack()
-    return image
-
-
-def microphone_material():
-    mat = bpy.data.materials.get("microfono")
-    if mat is not None:
-        return mat
-    mat = bpy.data.materials.new("microfono")
-    mat.use_nodes = True
-    nodes = mat.node_tree.nodes
-    bsdf = next(n for n in nodes if n.type == 'BSDF_PRINCIPLED')
-    tex = nodes.new("ShaderNodeTexImage")
-    tex.image = microphone_image()
-    tex.interpolation = 'Closest'
-    mat.node_tree.links.new(tex.outputs["Color"], bsdf.inputs["Base Color"])
-    return mat
-
-
-def microphone_mesh():
-    """Handle (cylinder) and grille (sphere) along -Z from the origin (held in the fist, it carries on
-    past the hand: raising the hand to the chin points it at the mouth)."""
-    bm = bmesh.new()
-    bmesh.ops.create_cone(bm, cap_ends=True, segments=10, radius1=0.12, radius2=0.15, depth=1.0,
-                          matrix=Matrix.Translation((0, 0, -0.5)), calc_uvs=True)
-    bmesh.ops.create_uvsphere(bm, u_segments=12, v_segments=8, radius=0.24,
-                              matrix=Matrix.Translation((0, 0, -1.18)), calc_uvs=True)
-    # UVs: handle on the lower half of the picture, grille on the upper half
-    uv = bm.loops.layers.uv.verify()
-    for face in bm.faces:
-        grille = sum((l.vert.co.z for l in face.loops)) / len(face.loops) < -0.98
-        for loop in face.loops:
-            u, v = loop[uv].uv
-            loop[uv].uv = (u, 0.5 + v * 0.5) if grille else (u, v * 0.5)
-    me = bpy.data.meshes.new("microfono")
-    bm.to_mesh(me)
-    bm.free()
-    for poly in me.polygons:
-        poly.use_smooth = True
-    me.materials.append(microphone_material())
-    return me
-
-
-def demo_models(rig):
-    coll = bpy.data.collections.get("Modelos - cantar")
-    if coll is None:
-        coll = bpy.data.collections.new("Modelos - cantar")
-        bpy.context.scene.collection.children.link(coll)
+def remove_old_demo():
+    """Quita el ejemplo del micrófono de versiones anteriores de este script."""
+    action = bpy.data.actions.get("cantar")
+    if action is not None:
+        bpy.data.actions.remove(action)
     ob = bpy.data.objects.get("microfono")
-    if ob is None:
-        ob = bpy.data.objects.new("microfono", microphone_mesh())
-        coll.objects.link(ob)
-    rig.data.pose_position = 'REST'
+    if ob is not None:
+        mesh = ob.data
+        bpy.data.objects.remove(ob)
+        if mesh is not None and mesh.users == 0:
+            bpy.data.meshes.remove(mesh)
+    coll = bpy.data.collections.get("Modelos - cantar")
+    if coll is not None:
+        bpy.data.collections.remove(coll)
+    mat = bpy.data.materials.get("microfono")
+    if mat is not None and mat.users == 0:
+        bpy.data.materials.remove(mat)
+    img = bpy.data.images.get("microfono_textura")
+    if img is not None and img.users == 0:
+        bpy.data.images.remove(img)
+
+
+def upgrade(rig):
+    mesh_ob = bpy.data.objects[MESH_NAME]
+    remove_old_demo()
+    no_mirror(rig)
+    blendemotes_export.reset_mechanism(rig)
+    unlock_sideways(rig)
+    first_time = "right_hand" not in rig.data.bones
+    add_tip_bones(rig)
+    if first_time:
+        paint_tip_weights(mesh_ob)
+    add_drivers(rig)
+    grey_bones(rig)
+    organise_collections(rig)
+    upgrade_scripts()
     bpy.context.view_layer.update()
-    # in the right fist, pointing down along the arm
-    world = rig.matrix_world @ Matrix.Translation((-1.25, 0.0, 2.85))
-    ob.parent = rig
-    ob.parent_type = 'BONE'
-    ob.parent_bone = "right_item"
-    ob.matrix_world = world
-    rig.data.pose_position = 'POSE'
-    bpy.context.view_layer.update()
-    return coll
-
-
-def key(pb, path, frame, value, index=None):
-    if index is None:
-        setattr(pb, path, value)
-        pb.keyframe_insert(path, frame=frame)
-    else:
-        arr = list(getattr(pb, path))
-        arr[index] = value
-        setattr(pb, path, arr)
-        pb.keyframe_insert(path, index=index, frame=frame)
-
-
-def demo_action(rig, models):
-    if "cantar" in bpy.data.actions:
-        bpy.data.actions.remove(bpy.data.actions["cantar"])
-    action = bpy.data.actions.new("cantar")
-    action.use_fake_user = True  # keep it in the file when another action is shown
-    rig.animation_data_create()
-    rig.animation_data.action = action
-    if hasattr(rig.animation_data, "action_slot") and rig.animation_data.action_slot is None:
-        slots = list(getattr(rig.animation_data, "action_suitable_slots", []))
-        if slots:
-            rig.animation_data.action_slot = slots[0]
-    for pb in rig.pose.bones:
-        pb.location = (0, 0, 0)
-        pb.rotation_euler = (0, 0, 0)
-        pb.scale = (1, 1, 1)
-    settings = rig.pose.bones["settings"]
-    frames = [0, 12, 24, 36, 48]
-    for f in frames:
-        # FK everywhere (the bends are keyed by hand)
-        settings["rightArm IK"] = 0.0
-        settings["leftArm IK"] = 0.0
-        settings["rightLeg IK"] = 0.0
-        settings["leftLeg IK"] = 0.0
-        for prop in ("rightArm IK", "leftArm IK", "rightLeg IK", "leftLeg IK"):
-            settings.keyframe_insert(f'["{prop}"]', frame=f)
-
-    pb = rig.pose.bones
-    # right hand under the chin, the microphone pointing at the mouth
-    for f in frames:
-        beat = 3 if (f // 12) % 2 == 0 else 0
-        key(pb["right_arm"], "rotation_euler", f, math.radians(-32 - beat), 0)
-        key(pb["right_arm"], "rotation_euler", f, math.radians(24), 2)
-        key(pb["right_arm_bend"], "rotation_euler", f, math.radians(-128 + beat), 0)
-    # left arm up and out, waving with the elbow bending sideways
-    for f in frames:
-        wave = 1 if (f // 12) % 2 == 0 else -1
-        key(pb["left_arm"], "rotation_euler", f, math.radians(-75), 2)
-        key(pb["left_arm"], "rotation_euler", f, math.radians(-10), 0)
-        key(pb["left_arm_bend"], "rotation_euler", f, math.radians(-55 - 25 * wave), 2)
-        key(pb["left_arm_bend"], "rotation_euler", f, math.radians(-15), 0)
-    # right knee out to the side, bouncing; left leg straight
-    for f in frames:
-        up = (f // 12) % 2 == 0
-        key(pb["right_leg"], "rotation_euler", f, math.radians(-25 if up else -10), 0)
-        key(pb["right_leg"], "rotation_euler", f, math.radians(12), 2)
-        key(pb["right_leg_bend"], "rotation_euler", f, math.radians(35 if up else 15), 0)
-        key(pb["right_leg_bend"], "rotation_euler", f, math.radians(-30 if up else -12), 2)
-    # head nodding to the beat
-    for f in frames:
-        key(pb["head"], "rotation_euler", f, math.radians(8 if (f // 12) % 2 == 0 else -4), 0)
-    action.use_frame_range = True
-    action.frame_start = 0
-    action.frame_end = 48
-    action.use_cyclic = True
-    meta = action.emote
-    meta.name = "Cantar"
-    meta.author = "BlendEmotes"
-    meta.description = "Micrófono en mano, codo y rodilla hacia los lados"
-    meta.models_collection = models
-    return action
 
 
 def main():
-    out, demo = args()
+    out = args()
     rig = bpy.data.objects[RIG_NAME]
-    unlock_sideways(rig)
-    upgrade_scripts()
-    if demo:
-        previous = rig.animation_data.action if rig.animation_data else None
-        models = demo_models(rig)
-        demo_action(rig, models)
-        if previous is not None:
-            rig.animation_data.action = previous
+    upgrade(rig)
     bpy.ops.wm.save_as_mainfile(filepath=out, compress=True)
     print("Rig actualizado:", out)
 

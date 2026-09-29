@@ -11,6 +11,8 @@ import java.util.List;
 /** Emotes shipped inside the mod jar ({@code assets/blendemotes/emotes/index.txt}). */
 public final class BuiltinEmotes {
     public static final String ROOT = "/assets/blendemotes/emotes/";
+    /** Emotes only the in-game self-test plays (not listed in the menu). */
+    public static final String SELFTEST_ROOT = "/assets/blendemotes/selftest/";
 
     private BuiltinEmotes() {
     }
@@ -50,5 +52,30 @@ public final class BuiltinEmotes {
             // no builtin emotes
         }
         return out;
+    }
+
+    /**
+     * A self-test emote by name ("Manos y pies" -> selftest/manos_y_pies.json), or null. They show
+     * hands, feet and the rest of the rig in the CI screenshots without appearing in the menu.
+     */
+    public static Emote selfTest(String name) {
+        String file = SELFTEST_ROOT + name.toLowerCase(java.util.Locale.ROOT).replace(' ', '_') + ".json";
+        InputStream in = BuiltinEmotes.class.getResourceAsStream(file);
+        if (in == null) {
+            return null;
+        }
+        try {
+            java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+            byte[] buf = new byte[8192];
+            int n;
+            while ((n = in.read(buf)) > 0) {
+                out.write(buf, 0, n);
+            }
+            in.close();
+            List<Emote> emotes = EmoteFiles.parse(new String(out.toByteArray(), StandardCharsets.UTF_8), "selftest:" + file);
+            return emotes.isEmpty() ? null : emotes.get(0);
+        } catch (Exception e) {
+            return null;
+        }
     }
 }
