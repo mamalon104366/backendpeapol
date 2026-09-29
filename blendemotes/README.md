@@ -168,6 +168,21 @@ dibujan sin ocultar caras traseras (sirven planos y mallas abiertas) y con trans
 | `emotesFolder` | `blendemotes/emotes` | carpeta de emotes |
 | `wheel` | 8 casillas | emotes de la rueda (id o nombre) |
 
+## Para otros mods (1.8.9 y 1.12.2)
+
+`dev.blendemotes.legacy.api.BlendEmotesApi` deja que otro mod del cliente (por ejemplo un
+cliente con su propia rueda de emotes, como Abstract) muestre y reproduzca estos emotes. Solo usa
+tipos del JDK y de Minecraft, así que se puede llamar por reflexión sin depender de BlendEmotes al
+compilar:
+
+| Método | Qué hace |
+|---|---|
+| `emotesJson()` | lista de emotes: `id`, `name`, `author`, `description`, `loop`, `icon` (PNG en base64) |
+| `play(id)` / `stop()` / `isPlaying()` | reproducir / parar en el jugador local |
+| `reload()` / `folder()` | volver a leer la carpeta de emotes / su ruta |
+| `setOwnKeysEnabled(false)` | apaga las teclas de la rueda y el menú de BlendEmotes (tu rueda las sustituye) |
+| `addPoseHook((modelo, entidad) -> ...)` | tus emotes sencillos se aplican sobre los modelos de BlendEmotes (antes que un emote de BlendEmotes, que gana mientras suena) |
+
 ## Multijugador
 
 Los demás jugadores ven tus emotes cuando el **servidor** tiene instalado BlendEmotes
